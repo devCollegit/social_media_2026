@@ -1,0 +1,13 @@
+# 분석 산출물 / 수집 DB (재생성 가능)
+project/outputs/
+project/data/collected.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# 환경 변수
+.env

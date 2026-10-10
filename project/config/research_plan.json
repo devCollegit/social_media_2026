@@ -1,0 +1,36 @@
+{
+  "topic": "국내 거주 외국인과 내국인의 생활권 및 교류 공간 분석",
+  "question": "내국인과 외국인은 서로 다른 장소를 이용하는가? 두 집단이 함께 이용하는 공간은 어떤 조건을 갖추고 있는가?",
+  "regions": ["서울", "경기", "인천"],
+  "limit_per_query": 40,
+  "request_interval": 0.2,
+  "max_retries": 2,
+  "segments": [
+    {
+      "name": "korean",
+      "label": "내국인",
+      "lang": "ko",
+      "sources": ["sample", "naver_blog", "naver_cafearticle"],
+      "queries": [
+        "서울 맛집 후기",
+        "성수동 카페",
+        "동네 밥집 추천",
+        "주말 나들이 장소",
+        "혼밥 식당"
+      ]
+    },
+    {
+      "name": "foreign",
+      "label": "외국인",
+      "lang": "en",
+      "sources": ["sample", "naver_blog", "naver_cafearticle"],
+      "queries": [
+        "seoul restaurant foreigner",
+        "english menu seoul",
+        "halal food seoul",
+        "expat community seoul",
+        "itaewon food"
+      ]
+    }
+  ]
+}

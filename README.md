@@ -39,3 +39,15 @@ GitHub 사용이 어려운 분은 카카오톡에 내용을 남겨 주세요. �
 ## 진행
 
 전체 의견을 취합한 뒤 주제를 선정하고 역할과 일정을 함께 조율할 예정입니다. 잘 부탁드립니다.
+
+## 분석 파이프라인 프로토타입
+
+조현호 님 아이디어(내국인·외국인 생활권 비교)를 기준으로 실행 가능한 수집·분석 파이프라인을 [`project/`](project/) 에 구현해 두었습니다. 주제가 바뀌어도 `project/config/research_plan.json` 의 검색어와 집단 정의만 수정하면 그대로 재사용할 수 있습니다.
+
+```bash
+cd project
+PYTHONPATH=src python3 -m sma all
+```
+
+자세한 사용법은 [project/README.md](project/README.md), 공모전·출판까지의 계획은 [project/docs/로드맵.md](project/docs/로드맵.md) 를 참고해 주세요.
+
