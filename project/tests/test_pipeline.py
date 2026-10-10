@@ -5,9 +5,11 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +22,7 @@ from sma.analysis.sentiment import score_text  # noqa: E402
 from sma.analysis.text import tokenize  # noqa: E402
 from sma.collectors import SampleCollector  # noqa: E402
 from sma.collectors.base import CollectorUnavailable  # noqa: E402
+from sma.collectors.naver import NaverBlogCollector, NaverLocalCollector  # noqa: E402
 from sma.config import ResearchPlan  # noqa: E402
 from sma.controllers import CollectionController  # noqa: E402
 from sma.models import Document, QueryTask  # noqa: E402
@@ -150,3 +153,45 @@ class AgentTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NaverBackendTests(unittest.TestCase):
+    """키 발급처가 NAVER API HUB 로 바뀐 뒤의 호출 규약을 고정한다."""
+
+    def test_apihub_is_default_backend(self):
+        collector = NaverBlogCollector(client_id="id", client_secret="secret", backend=None)
+        with mock.patch.dict(os.environ, {}, clear=True):
+            collector = NaverBlogCollector(client_id="id", client_secret="secret")
+        self.assertEqual(collector.backend, "apihub")
+        url = collector._url("이태원", 10, 1)
+        self.assertTrue(url.startswith("https://naverapihub.apigw.ntruss.com/search/v1/blog?"))
+        self.assertNotIn(".json", url)
+
+    def test_developers_backend_keeps_legacy_url(self):
+        collector = NaverBlogCollector(
+            client_id="id", client_secret="secret", backend="developers"
+        )
+        url = collector._url("이태원", 10, 1)
+        self.assertTrue(url.startswith("https://openapi.naver.com/v1/search/blog.json?"))
+
+    def test_unknown_backend_is_reported(self):
+        collector = NaverBlogCollector(client_id="id", client_secret="secret", backend="nope")
+        ok, reason = collector.available()
+        self.assertFalse(ok)
+        self.assertIn("NAVER_API_BACKEND", reason)
+
+    def test_local_collector_uses_allowed_sort(self):
+        """지역 검색은 sort=sim 을 거부한다(SE04)."""
+        collector = NaverLocalCollector(client_id="id", client_secret="secret")
+        self.assertIn(collector.sort, {"random", "comment"})
+        self.assertIn("sort=comment", collector._url("이태원 카페", 5, 1))
+
+    def test_local_collector_requests_once_within_limit(self):
+        collector = NaverLocalCollector(client_id="id", client_secret="secret")
+        task = QueryTask(query="이태원 카페", segment="korean", source="naver_local", limit=50)
+        with mock.patch.object(
+            collector, "_request", return_value={"items": [{"title": "가게", "address": "서울"}]}
+        ) as req:
+            docs = list(collector.collect(task))
+        req.assert_called_once_with("이태원 카페", 5, 1)
+        self.assertEqual(len(docs), 1)

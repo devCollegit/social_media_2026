@@ -49,6 +49,7 @@ PYTHONPATH=src python3 -m sma all            # 과제 → 공모전 → 책 전�
 ```bash
 PYTHONPATH=src python3 -m sma collect --source sample
 PYTHONPATH=src python3 -m sma research                  # 수집 + 분석 + 리포트
+PYTHONPATH=src python3 -m sma doctor                    # 네이버 API 키 동작 확인
 PYTHONPATH=src python3 -m sma analyze                   # 기존 DB로 분석만 재실행
 PYTHONPATH=src python3 -m sma tune                      # 불용어 후보 + 표본 균형 진단
 PYTHONPATH=src python3 -m sma geo                       # 공공데이터 결합 + 생활권 지도
@@ -121,6 +122,44 @@ controller.register(MyCollector())
 | `contest/제안서.md` · `체크리스트.md` · `일정.md` | 공모전 제출 패키지 |
 | `book/기획안.md` · `목차.md` · `chapters/*.md` · `집필일정.md` | 단행본 원고 구조 |
 | `runs/*.json` | 에이전트 실행 로그 |
+
+## 네이버 API 키 발급
+
+2026-07-31 부로 구 네이버 개발자센터에서는 **검색 API 신규 신청이 차단**되었습니다.
+신규 발급은 **NAVER API HUB**(네이버 클라우드 플랫폼)를 이용합니다.
+
+1. [NAVER API HUB](https://www.ncloud.com/product/applicationService/naverApiHub) 에서 NCP 계정 생성
+2. 콘솔 → **Menu → All Services → Application Services → NAVER API HUB → 신청하기**
+3. **Subscription** 에서 서비스 이용 신청
+4. **Application** → **Application 등록** → 블로그·카페글·지역 검색 선택
+5. **[인증 정보]** 에서 Client ID / Client Secret 확인
+
+```bash
+cp .env.example .env     # 발급받은 값 입력
+export $(grep -v '^#' .env | xargs)
+PYTHONPATH=src python3 -m sma doctor
+```
+
+| 백엔드 | 호출 주소 | 인증 헤더 |
+|---|---|---|
+| `apihub` (기본값) | `naverapihub.apigw.ntruss.com/search/v1` | `X-NCP-APIGW-API-KEY-ID` / `X-NCP-APIGW-API-KEY` |
+| `developers` | `openapi.naver.com/v1/search` | `X-Naver-Client-Id` / `X-Naver-Client-Secret` |
+
+기존 개발자센터 키가 있다면 `NAVER_API_BACKEND=developers` 로 계속 쓸 수 있지만,
+**2027-06-30 에 기존 키도 차단**되므로 이관이 필요합니다.
+두 백엔드의 Client ID 는 서로 호환되지 않습니다.
+
+### 수집 한도와 제약
+
+| 항목 | 내용 |
+|---|---|
+| 호출 한도 | 하루 25,000회 (검색 API 합산) |
+| 블로그·카페글 | 검색어당 최대 1,000건. 그 이상은 검색어를 쪼개야 함 |
+| 지역 검색 | 최대 5건, `start=1` 고정, 정렬은 `random`/`comment` 만 허용 |
+| 미제공 | 작성자 정보, 댓글, 정확한 작성 시각(블로그는 `postdate` 만) |
+
+> 집단(내국인/외국인) 구분은 API가 주지 않습니다. `research_plan.json` 의
+> 검색어 설계로 나누므로, 실데이터 전환 후 `sma tune` 으로 표본 편향을 반드시 점검하세요.
 
 ## 분석 지표
 

@@ -26,7 +26,10 @@ from .config import (
     DEFAULT_STOPWORDS_PATH,
     ResearchPlan,
 )
+from .collectors.base import CollectorError, CollectorUnavailable
+from .collectors.naver import BACKENDS, DEFAULT_BACKEND, NaverBlogCollector
 from .controllers import CollectionController
+from .models import QueryTask
 from .storage import DocumentStore
 
 
@@ -76,6 +79,9 @@ def build_parser() -> argparse.ArgumentParser:
     all_cmd.add_argument("--title", default="섞이지 않는 도시")
 
     sub.add_parser("reset", help="수집 DB 비우기")
+
+    doctor = sub.add_parser("doctor", help="네이버 API 키가 실제로 동작하는지 1회 호출로 확인")
+    doctor.add_argument("--query", default="이태원 맛집", help="검증용 검색어")
     return parser
 
 
@@ -112,6 +118,9 @@ def _dispatch(args, ctx: AgentContext, store: DocumentStore, plan: ResearchPlan,
         store.clear()
         log("수집 DB를 비웠습니다.")
         return 0
+
+    if command == "doctor":
+        return _doctor(args.query, log)
 
     if command == "collect":
         controller = CollectionController(store, default_collectors(), logger=log)
@@ -162,3 +171,47 @@ def _dispatch(args, ctx: AgentContext, store: DocumentStore, plan: ResearchPlan,
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+def _doctor(query: str, log) -> int:
+    """네이버 검색 API 자격증명을 실제 호출 1회로 검증한다."""
+    import os
+
+    backend = (os.getenv("NAVER_API_BACKEND") or DEFAULT_BACKEND).lower()
+    client_id = os.getenv("NAVER_CLIENT_ID", "")
+    secret = os.getenv("NAVER_CLIENT_SECRET", "")
+
+    log(f"백엔드: {backend}")
+    if backend in BACKENDS:
+        log(f"  호출 주소: {BACKENDS[backend]['base']}")
+        log(f"  인증 헤더: {BACKENDS[backend]['id_header']}")
+    log(f"NAVER_CLIENT_ID: {_mask(client_id)}")
+    log(f"NAVER_CLIENT_SECRET: {_mask(secret)}")
+
+    collector = NaverBlogCollector()
+    ok, reason = collector.available()
+    if not ok:
+        log(f"\n실패: {reason}")
+        return 1
+
+    task = QueryTask(query=query, segment="doctor", source="naver_blog", limit=1)
+    try:
+        docs = list(collector.collect(task))
+    except (CollectorError, CollectorUnavailable) as exc:
+        log(f"\n실패: {exc}")
+        return 1
+
+    if not docs:
+        log(f"\n호출은 됐지만 '{query}' 결과가 0건입니다. 검색어를 바꿔 다시 확인하세요.")
+        return 1
+
+    log(f"\n성공: {len(docs)}건 수신")
+    log(f"  예시 제목: {docs[0].title[:60]}")
+    log("\n`python -m sma collect --source naver_blog` 로 수집을 시작할 수 있습니다.")
+    return 0
+
+
+def _mask(value: str) -> str:
+    if not value:
+        return "(미설정)"
+    return f"{value[:4]}…{value[-2:]} (길이 {len(value)})"
