@@ -11,6 +11,7 @@ from .models import QueryTask
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PLAN_PATH = PROJECT_ROOT / "config" / "research_plan.json"
+DEFAULT_STOPWORDS_PATH = PROJECT_ROOT / "config" / "stopwords.txt"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs"
 DEFAULT_DB_PATH = PROJECT_ROOT / "data" / "collected.sqlite3"
 

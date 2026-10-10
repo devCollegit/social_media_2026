@@ -34,6 +34,11 @@ def _log_odds(
     return scores
 
 
+def log_odds(counter_a: Counter[str], counter_b: Counter[str], alpha: float = 0.5) -> dict[str, float]:
+    """공개 API. 양수면 A 집단 특징어, 음수면 B 집단 특징어."""
+    return _log_odds(counter_a, counter_b, alpha)
+
+
 def region_key(region: str) -> str:
     """'서울 성동구' 처럼 시도+시군구 2단계까지를 비교 단위로 삼는다."""
     return " ".join(region.split()[:2])

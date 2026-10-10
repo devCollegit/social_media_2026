@@ -15,10 +15,17 @@ import argparse
 import sys
 from pathlib import Path
 
-from .agents import BookAgent, ContestAgent, ResearchAgent
+from .agents import BookAgent, ContestAgent, GeoAgent, ResearchAgent, TuningAgent
 from .agents.base import AgentContext
+from .analysis.text import load_stopwords
 from .collectors import default_collectors
-from .config import DEFAULT_DB_PATH, DEFAULT_OUTPUT_DIR, DEFAULT_PLAN_PATH, ResearchPlan
+from .config import (
+    DEFAULT_DB_PATH,
+    DEFAULT_OUTPUT_DIR,
+    DEFAULT_PLAN_PATH,
+    DEFAULT_STOPWORDS_PATH,
+    ResearchPlan,
+)
 from .controllers import CollectionController
 from .storage import DocumentStore
 
@@ -28,6 +35,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--plan", default=str(DEFAULT_PLAN_PATH), help="연구 계획 JSON 경로")
     parser.add_argument("--db", default=str(DEFAULT_DB_PATH), help="SQLite 경로")
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT_DIR), help="산출물 디렉터리")
+    parser.add_argument(
+        "--stopwords", default=str(DEFAULT_STOPWORDS_PATH), help="추가 불용어 파일 경로"
+    )
     parser.add_argument("--source", action="append", dest="sources", help="사용할 수집기 (반복 지정)")
     parser.add_argument("--quiet", action="store_true", help="로그 숨김")
 
@@ -37,6 +47,21 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("research", help="개인과제 에이전트 실행 (수집+분석+리포트)")
     sub.add_parser("analyze", help="기존 데이터로 분석/리포트만 재생성")
 
+    tune = sub.add_parser("tune", help="불용어 후보 추출 및 표본 균형 진단")
+    tune.add_argument("--top", type=int, default=30, help="불용어 후보 개수")
+    tune.add_argument("--max-z", type=float, default=1.0, help="변별력 상한(|z|)")
+    tune.add_argument("--min-count", type=int, default=5, help="최소 전체 등장 횟수")
+
+    geo = sub.add_parser("geo", help="공공데이터 결합 및 생활권 지도 생성")
+    geo.add_argument("--stats", help="등록외국인 통계 CSV 경로")
+    geo.add_argument("--coords", help="지역 좌표 CSV 경로")
+    geo.add_argument(
+        "--min-mentions",
+        type=int,
+        default=4,
+        help="교류 지수 순위에 포함할 최소 언급 수 (기본 4)",
+    )
+
     contest = sub.add_parser("contest", help="공모전 제출물 생성")
     contest.add_argument("--name", default="데이터 분석 공모전")
     contest.add_argument("--deadline", help="YYYY-MM-DD")
@@ -45,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     book.add_argument("--title", default="섞이지 않는 도시")
     book.add_argument("--months", type=int, default=6)
 
-    all_cmd = sub.add_parser("all", help="과제 → 공모전 → 책까지 전체 실행")
+    all_cmd = sub.add_parser("all", help="과제 → 보정 → 지도 → 공모전 → 책까지 전체 실행")
     all_cmd.add_argument("--contest-name", default="데이터 분석 공모전")
     all_cmd.add_argument("--deadline")
     all_cmd.add_argument("--title", default="섞이지 않는 도시")
@@ -58,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     log = (lambda _msg: None) if args.quiet else print
 
+    load_stopwords(args.stopwords)
     plan = ResearchPlan.load(args.plan)
     store = DocumentStore(args.db)
     ctx = AgentContext(plan=plan, store=store, output_dir=Path(args.output), logger=log)
@@ -99,6 +125,18 @@ def _dispatch(args, ctx: AgentContext, store: DocumentStore, plan: ResearchPlan,
         agent = ResearchAgent(sources=args.sources, skip_collect=(command == "analyze"))
         return 0 if agent.run(ctx).ok else 1
 
+    if command == "tune":
+        agent = TuningAgent(top_n=args.top, max_abs_z=args.max_z, min_total=args.min_count)
+        return 0 if agent.run(ctx).ok else 1
+
+    if command == "geo":
+        agent = GeoAgent(
+            stats_path=args.stats,
+            coords_path=args.coords,
+            min_mentions=args.min_mentions,
+        )
+        return 0 if agent.run(ctx).ok else 1
+
     if command == "contest":
         agent = ContestAgent(contest_name=args.name, deadline=args.deadline)
         return 0 if agent.run(ctx).ok else 1
@@ -112,6 +150,8 @@ def _dispatch(args, ctx: AgentContext, store: DocumentStore, plan: ResearchPlan,
         if not research.run(ctx).ok:
             log("개인과제 에이전트가 실패해 후속 단계를 중단합니다.")
             return 1
+        TuningAgent().run(ctx)
+        GeoAgent().run(ctx)
         ContestAgent(contest_name=args.contest_name, deadline=args.deadline).run(ctx)
         BookAgent(title=args.title).run(ctx)
         log(f"\n모든 산출물이 {ctx.output_dir} 에 생성되었습니다.")

@@ -53,7 +53,13 @@ class ContestAgent(Agent):
 
     def _proposal(self, ctx: AgentContext) -> StepResult:
         analysis = ctx.data.get("analysis") or ctx.read_json("analysis.json")
-        md = render_proposal(analysis, self.contest_name, self.deadline)
+        geo = ctx.data.get("geo")
+        if geo is None:
+            try:
+                geo = ctx.read_json("geo/geo_analysis.json")
+            except FileNotFoundError:
+                geo = None
+        md = render_proposal(analysis, self.contest_name, self.deadline, geo)
         path = ctx.write(f"{CONTEST_DIR}/제안서.md", md)
         return StepResult("proposal", True, "제안서 초안 생성", [str(path)])
 
@@ -88,7 +94,9 @@ class ContestAgent(Agent):
         return StepResult("schedule", True, f"마일스톤 {len(MILESTONES)}개", [str(path)])
 
 
-def render_proposal(analysis: dict, contest_name: str, deadline: date) -> str:
+def render_proposal(
+    analysis: dict, contest_name: str, deadline: date, geo: dict | None = None
+) -> str:
     segments = analysis["segments"]
     names = list(segments)
     a, b = names[0], names[1]
@@ -150,7 +158,7 @@ def render_proposal(analysis: dict, contest_name: str, deadline: date) -> str:
 - {lb} 변별 키워드: {distinct(b)}
 - 교류 공간 후보 상위: {', '.join(c['place'] for c in candidates[:5]) or '추가 수집 필요'}
 
-## 7. 기대 효과 및 활용 방안
+{_geo_section(geo, la, lb)}## 7. 기대 효과 및 활용 방안
 
 - **지자체**: 다문화 정책 예산을 '겹침이 높은 지역'에 우선 배분하는 근거 자료
 - **상권**: 외국인 유입 가능성이 높은 업종·입지 조건 제시
@@ -175,3 +183,40 @@ def render_proposal(analysis: dict, contest_name: str, deadline: date) -> str:
 - 작성자 식별 정보는 저장하지 않으며 분석 단위는 문서 집계값
 - 특정 국적·집단에 대한 가치 판단이 아닌 공간 이용 패턴 기술에 한정
 """
+
+
+def _geo_section(geo: dict | None, label_a: str, label_b: str) -> str:
+    """공공데이터 결합 결과가 있으면 제안서에 끼워 넣는다."""
+    if not geo or not geo.get("regions"):
+        return ""
+
+    corr = geo.get("correlation_resident_vs_mention_share")
+    gaps = [r for r in geo["regions"] if r.get("gap") is not None]
+    over = sorted(gaps, key=lambda r: -r["gap"])[:3]
+    under = sorted(gaps, key=lambda r: r["gap"])[:3]
+    top_mix = geo.get("top_mix_regions", [])[:5]
+
+    lines = [
+        "## 6-1. 공공데이터 결합 결과\n",
+        "등록외국인 통계와 결합해 '사는 곳'과 '활동하는 곳'의 차이를 확인했다.\n",
+        f"- 분석 지역 {len(geo['regions'])}곳 (공공통계 매칭 {geo.get('matched_regions', 0)}곳)",
+    ]
+    if corr is not None:
+        lines.append(f"- 거주 분포와 {label_b} 언급 분포의 상관계수: **{corr}**")
+    if over:
+        lines.append(
+            "- 거주 대비 활동이 많은 지역: "
+            + ", ".join(f"{r['region']}({r['gap']:+})" for r in over)
+        )
+    if under:
+        lines.append(
+            "- 거주 대비 활동이 적은 지역: "
+            + ", ".join(f"{r['region']}({r['gap']:+})" for r in under)
+        )
+    if top_mix:
+        lines.append(
+            f"- {label_a}·{label_b} 언급이 가장 고른 지역: "
+            + ", ".join(f"{r['region']}({r['mix_index']})" for r in top_mix)
+        )
+    lines.append("\n제출 시 `outputs/geo/생활권지도.html` 을 인터랙티브 지도로 함께 첨부한다.\n")
+    return "\n".join(lines) + "\n"

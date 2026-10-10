@@ -110,6 +110,9 @@ class CollectionReport:
     duplicated: int = 0
     by_source: dict[str, SourceStat] = field(default_factory=dict)
     skipped_sources: dict[str, str] = field(default_factory=dict)
+    #: 검색어 단위 수집 내역. 중복 제거 때문에 저장된 문서만으로는
+    #: 어떤 검색어가 실제로 결과를 냈는지 알 수 없어 따로 기록한다.
+    task_stats: list[dict[str, Any]] = field(default_factory=list)
 
     def stat(self, source: str) -> SourceStat:
         return self.by_source.setdefault(source, SourceStat(source=source))

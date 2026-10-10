@@ -109,10 +109,31 @@ class CollectionController:
                 continue
             except CollectorError as exc:
                 stat.errors.append(f"{task.query}: {exc}")
+                report.task_stats.append(
+                    {
+                        "source": task.source,
+                        "segment": task.segment,
+                        "query": task.query,
+                        "fetched": 0,
+                        "stored": 0,
+                        "duplicated": 0,
+                        "error": str(exc),
+                    }
+                )
                 self.logger(f"  실패: {exc}")
                 continue
 
             stored, duplicated = self.store.add_many(documents)
+            report.task_stats.append(
+                {
+                    "source": task.source,
+                    "segment": task.segment,
+                    "query": task.query,
+                    "fetched": len(documents),
+                    "stored": stored,
+                    "duplicated": duplicated,
+                }
+            )
             stat.fetched += len(documents)
             stat.stored += stored
             stat.duplicated += duplicated
