@@ -1,0 +1,12 @@
+# 수집 원본과 중간 산출물은 저장소에 올리지 않는다.
+# 원문 저장·재배포가 제한될 수 있으므로 코드와 집계 결과만 공유한다.
+data/raw/
+data/interim/
+data/processed/
+data/labels/
+runs/
+output/
+
+__pycache__/
+*.pyc
+.DS_Store
