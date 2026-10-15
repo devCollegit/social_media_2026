@@ -14,7 +14,7 @@ from reportlab.platypus import Paragraph
 
 
 BASE = Path(__file__).resolve().parent
-OUT = BASE / "output" / "토스증권_감성분석_중간보고서.pdf"
+OUT = BASE / "output" / "6조_토스증권_감성분석_중간보고서.pdf"
 WIDTH, HEIGHT = 960, 540
 BLUE = "#1B64DA"
 INK = "#191F28"
