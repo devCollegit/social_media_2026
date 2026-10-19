@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from build_deck import BLUE, WHITE, Deck, build_deck, contrast_ratio
+from build_deck import BLUE, TOTAL_PAGES, WHITE, Deck, build_deck, contrast_ratio
 
 
 class DeckLayoutTests(unittest.TestCase):
@@ -13,8 +13,8 @@ class DeckLayoutTests(unittest.TestCase):
             output = Path(directory) / "deck.pdf"
             deck = build_deck(output)
             reader = PdfReader(output)
-            self.assertEqual(len(reader.pages), 9)
-            self.assertEqual(len(deck.page_regions), 9)
+            self.assertEqual(len(reader.pages), TOTAL_PAGES)
+            self.assertEqual(len(deck.page_regions), TOTAL_PAGES)
             for page in reader.pages:
                 self.assertEqual(tuple(page.mediabox), (0, 0, 960, 540))
                 self.assertTrue(page.extract_text().strip())
@@ -23,7 +23,7 @@ class DeckLayoutTests(unittest.TestCase):
                     if font["/Subtype"] == "/TrueType":
                         self.assertIn("/FontFile2", font["/FontDescriptor"])
             content = "".join(page.extract_text() for page in reader.pages)
-            for expected in ("다섯 하위 지표", "H1", "가정 A", "13명", "실증 수치는 없으며"):
+            for expected in ("다섯 하위 지표", "H1", "가정 A", "13명", "실증 수치는 없으며", "KRX 지표 정의", "합성입니다"):
                 self.assertIn(expected, content)
 
     def test_overlapping_paragraphs_are_rejected(self):

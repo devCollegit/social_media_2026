@@ -7,6 +7,7 @@ from pathlib import Path
 from pypdf import PdfReader
 from reportlab.lib.colors import HexColor
 from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -25,6 +26,8 @@ RED = "#B52A38"
 MINT = "#E8F3FF"
 WHITE = "#FFFFFF"
 ROMAN = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX")
+APPENDIX = ("부록 A", "부록 B", "부록 C")
+TOTAL_PAGES = len(ROMAN) + len(APPENDIX)
 
 
 def contrast_ratio(foreground, background):
@@ -120,6 +123,26 @@ class Deck:
         self.canvas.setFillColor(HexColor(color))
         self.canvas.roundRect(x, top - height, width, height, 10, fill=1, stroke=0)
 
+    def image(self, name, x, top, width):
+        path = BASE / "assets" / name
+        reader = ImageReader(str(path))
+        pixel_width, pixel_height = reader.getSize()
+        height = width * pixel_height / pixel_width
+        if x < 42 or x + width > 918 or top - height < 48 or top > 364:
+            raise ValueError(f"Page {self.page}: image exceeds content area: {name}")
+        region = TextRegion(x, top - height, x + width, top, name)
+        for other in self.regions:
+            dx = min(region.right, other.right) - max(region.left, other.left)
+            dy = min(region.top, other.top) - max(region.bottom, other.bottom)
+            if dx > 0.5 and dy > 0.5:
+                raise ValueError(f"Page {self.page}: image covers text: {other.label!r}")
+        self.regions.append(region)
+        self.canvas.drawImage(reader, x, top - height, width, height)
+        self.canvas.setStrokeColor(HexColor(LINE))
+        self.canvas.setLineWidth(0.8)
+        self.canvas.rect(x, top - height, width, height, fill=0, stroke=1)
+        return top - height
+
     def rule(self, x, y, width):
         self.canvas.setStrokeColor(HexColor(LINE))
         self.canvas.setLineWidth(0.8)
@@ -154,13 +177,13 @@ class Deck:
         p = self.paragraph
         p(42, 518, 220, "market voice", 12, "X", BLUE)
         p(654, 518, 264, "소셜미디어 분석 6조 · 중간고사 제출", 11.5, color=GRAY)
-        p(42, 482, 876, f"{ROMAN[self.page - 1]}  {label}", 12, "B", BLUE)
+        p(42, 482, 876, f"{(ROMAN + APPENDIX)[self.page - 1]}  {label}", 12, "B", BLUE)
         p(42, 455, 876, title, 28, "X")
         p(42, 409, 876, subtitle, 12, color=GRAY, bottom=376)
         self.rule(42, 378, 876)
-        p(42, 28, 820, "토스증권 커뮤니티 공포탐욕지수 · 서비스 제안 기획서 · 2026.10.15",
+        p(42, 28, 800, "토스증권 커뮤니티 공포탐욕지수 · 서비스 제안 기획서 · 2026.10.19",
           10, color=GRAY, bottom=12)
-        p(870, 28, 48, f"{self.page} / 9", 10, "B", GRAY, bottom=12)
+        p(858, 28, 60, f"{self.page} / {TOTAL_PAGES}", 10, "B", GRAY, bottom=12)
 
     def end(self):
         self.page_regions.append(tuple(self.regions))
@@ -170,8 +193,8 @@ class Deck:
         self.canvas.save()
         data = self.buffer.getvalue()
         reader = PdfReader(BytesIO(data))
-        if len(reader.pages) != 9:
-            raise ValueError(f"Expected 9 pages, got {len(reader.pages)}")
+        if len(reader.pages) != TOTAL_PAGES:
+            raise ValueError(f"Expected {TOTAL_PAGES} pages, got {len(reader.pages)}")
         if not all(float(page.mediabox.width) == WIDTH
                    and float(page.mediabox.height) == HEIGHT for page in reader.pages):
             raise ValueError("Unexpected page dimensions")
@@ -331,7 +354,7 @@ def build_deck(output=OUT):
 
     deck.start(
         "제품", "세 개의 화면으로 전달합니다",
-        "개정안 데모를 읽기 쉬운 화면 구성도로 다시 그렸습니다. 실증 수치는 없으며, 원본 데모의 감성·매매동향도 합성 자료입니다.",
+        "개정안 데모를 화면 구성도로 정리했습니다. 실증 수치는 없으며, 원본 데모 화면은 부록 B·C에 싣습니다(감성·매매동향은 합성).",
     )
     for i, (title, user) in enumerate([
         ("시장 요약", "금융 미디어 · 뉴스레터"),
@@ -442,6 +465,58 @@ def build_deck(output=OUT):
         p(594, top, 324, body, 11.5, color=GRAY)
     box(594, 112, 324, 64, BLUE)
     p(608, 100, 296, "현재: 설계·기존 코드 동작 점검 완료<br/>남음: 실데이터·개정 분석 구현·실증", 11.5, "B", WHITE)
+    deck.end()
+
+    deck.start(
+        "데이터와 KRX 지표", "무엇을 모아, 무엇과 맞춰 보는가",
+        "KRX 자료는 감성 지수가 맞는지 확인하는 기준이자, 감성 지수로 설명하려는 대상입니다. 종목코드와 거래일로 한 표에 결합합니다.",
+    )
+    p(42, 364, 340, "데이터 출처", 14, "B")
+    top = table(42, 336, [96, 244], ["자료", "받는 법 · 주요 항목"], [
+        ["토스 커뮤니티", "종목 게시판 글·댓글<br/>종목코드·작성시각·본문·인증 뱃지"],
+        ["KRX 시세", "pykrx 일봉(무료), 매매동향·공매도<br/>(무료 회원 로그인)"],
+    ], padding=7)
+    p(42, top - 12, 340, "15:30 이후 글은 다음 거래일로 넘깁니다. 범위는 일평균 글 20건 이상인 "
+      "100~200종목, 약 60거래일입니다.", 11.5, color=GRAY)
+    box(42, 166, 340, 118, MINT)
+    p(56, 154, 312, "머신러닝 비교 (추가 분석)", 12, "B", BLUE)
+    p(56, 130, 312, "KRX 지표만 쓴 모델 A와 감성을 더한 모델 B로 다음 날을 예측합니다. "
+      "과거로만 학습하며, 선형 기준선과 트리 계열(LightGBM)을 비교하고 SHAP으로 기여를 봅니다.",
+      11.5, color=GRAY)
+    p(406, 364, 512, "KRX 지표 정의", 14, "B")
+    table(406, 336, [118, 330, 64], ["지표", "계산", "로그인"], [
+        ["수익률", "오늘 종가 ÷ 어제 종가 - 1", "불필요"],
+        ["초과수익률", "종목 수익률 - 시장 수익률 (KODEX 200 / 코스닥150)", "불필요"],
+        ["일중 변동폭", "(고가 - 저가) ÷ 시가", "불필요"],
+        ["거래량 비율", "오늘 거래량 ÷ 직전 20일 평균", "불필요"],
+        ["갭 · 장중 수익률", "다음 날 시가 ÷ 오늘 종가 - 1,<br/>다음 날 종가 ÷ 다음 날 시가 - 1", "불필요"],
+        ["순매수 비율", "개인·외국인 순매수 대금 ÷ 거래대금", "필요"],
+        ["공매도 비중", "공매도 거래량 ÷ 거래량", "필요"],
+        ["급등 · 급락일", "수익률 +5% 이상 / -5% 이하", "불필요"],
+    ], padding=5)
+    deck.end()
+
+    deck.start(
+        "원본 데모 · 시장 요약", "방향과 과열을 따로 읽는 첫 화면",
+        "개정안 데모 화면 1/3. 주가는 KRX 실제 일봉(2026.06.01~10.12), 감성·매매동향은 합성입니다. 화면 속 숫자는 결론이 아니라 계산 구조 확인용입니다.",
+    )
+    bottom = deck.image("demo_market_cards.png", 62, 364, 836)
+    p(62, bottom - 10, 836, "왼쪽부터 방향 지수 게이지, 과열 강도, 12종목 국면 지도(가로 과열 강도 · 세로 방향 지수).",
+      11.5, color=GRAY)
+    deck.end()
+
+    deck.start(
+        "원본 데모 · 종목 상세", "한 종목의 가격과 심리를 같은 시간축에",
+        "개정안 데모 화면 2/3. 종가는 KRX 실제 값, 감성 지수와 글 수는 합성입니다. 회귀·반전 화면(3/3)은 합성 판정값이 커서 싣지 않았습니다.",
+    )
+    deck.image("demo_stock.png", 42, 364, 577)
+    for top, label, body in [
+        (364, "위 그래프", "파란 선은 종가, 막대는 장중 감성 지수, 주황 점은 장전 감성 지수입니다."),
+        (284, "아래 그래프", "일별 긍정·중립·부정 글 수입니다. 글 수가 적은 날은 +10 평활의 영향을 받습니다."),
+        (204, "오른쪽 패널", "국면과 다섯 하위 지표의 현재 값, 다음 날 예측에 쓰는 장전 감성과 야간 관심도를 보여줍니다."),
+    ]:
+        p(643, top, 275, label, 12, "B", BLUE)
+        p(643, top - 22, 275, body, 11.5, color=GRAY)
     deck.end()
     deck.save(output)
     return deck
