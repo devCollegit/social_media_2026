@@ -1,0 +1,11 @@
+# 원문 데이터, 로그, 인증 정보는 커밋하지 않는다
+data/
+logs/
+state/
+.env
+*.cookie
+cookies*.json
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
