@@ -1,0 +1,230 @@
+{
+ "results": [
+  {
+   "type": "USER_COMMENT",
+   "commentId": 1006,
+   "author": {
+    "userProfileId": 900006,
+    "nickname": "합성닉네임6",
+    "profilePictureUrl": "https://example.invalid/profile.png",
+    "type": "USER",
+    "badge": {
+     "title": "1억대 자산가",
+     "color": "green",
+     "iconImageUrl": null
+    },
+    "shortDescription": "합성 자기소개",
+    "description": null
+   },
+   "parentId": null,
+   "message": {
+    "title": "",
+    "message": "장 끝나고 보니 그래도 반등 성공",
+    "representEmoji": ""
+   },
+   "board": {
+    "topic": "삼성전자",
+    "subjectId": "KR7005930003",
+    "subjectType": "STOCK",
+    "stockCode": "A005930",
+    "logoImageUrl": "https://example.invalid/logo.png"
+   },
+   "image": null,
+   "media": [],
+   "statistic": {
+    "likeCount": 3,
+    "replyCount": 2,
+    "repostCount": 0,
+    "readCount": 10,
+    "followerCount": 5,
+    "isLike": false,
+    "isBookmarked": false,
+    "isFollowing": false,
+    "isMyProfile": false
+   },
+   "vote": null,
+   "execution": null,
+   "disclosure": null,
+   "holding": {
+    "shareHoldingStatus": "HOLDING"
+   },
+   "edited": false,
+   "createdAt": "2026-10-16T15:45:02.123456789+09:00",
+   "updatedAt": "2026-10-16T15:45:02.123456789+09:00",
+   "isRepost": false,
+   "repostComment": null,
+   "bestReplyComment": null,
+   "accessLevel": "EXTERNAL_PUBLIC",
+   "topics": [
+    {
+     "type": "BOARD",
+     "id": "KR7005930003",
+     "name": "삼성전자"
+    }
+   ],
+   "status": "NORMAL",
+   "authorUserProfileId": 900006
+  },
+  {
+   "type": "USER_COMMENT",
+   "commentId": 1005,
+   "author": {
+    "userProfileId": 900005,
+    "nickname": "합성닉네임5",
+    "profilePictureUrl": "https://example.invalid/profile.png",
+    "type": "USER",
+    "badge": {
+     "title": "1억대 자산가",
+     "color": "green",
+     "iconImageUrl": null
+    },
+    "shortDescription": "합성 자기소개",
+    "description": null
+   },
+   "parentId": null,
+   "message": {
+    "title": "막판 매수",
+    "message": "종가 직전에 추가 매수했습니다",
+    "representEmoji": ""
+   },
+   "board": {
+    "topic": "삼성전자",
+    "subjectId": "KR7005930003",
+    "subjectType": "STOCK",
+    "stockCode": "A005930",
+    "logoImageUrl": "https://example.invalid/logo.png"
+   },
+   "image": null,
+   "media": [],
+   "statistic": {
+    "likeCount": 7,
+    "replyCount": 0,
+    "repostCount": 0,
+    "readCount": 10,
+    "followerCount": 5,
+    "isLike": false,
+    "isBookmarked": false,
+    "isFollowing": false,
+    "isMyProfile": false
+   },
+   "vote": null,
+   "execution": {
+    "stockCode": "A005930",
+    "stockName": "삼성전자",
+    "orderSide": "BUY",
+    "quantity": 12,
+    "amountKrw": 2604000,
+    "amountUsd": null,
+    "averageExecutionPriceKrw": 217000,
+    "averageExecutionPriceUsd": null,
+    "executedAt": "2026-10-16T09:01:10",
+    "profitAmountKrw": null,
+    "productType": "KR_STOCK",
+    "isSavings": false,
+    "isAbnormal": false
+   },
+   "disclosure": null,
+   "holding": {
+    "shareHoldingStatus": "HOLDING"
+   },
+   "edited": false,
+   "createdAt": "2026-10-16T15:29:59+09:00",
+   "updatedAt": "2026-10-16T15:29:59+09:00",
+   "isRepost": false,
+   "repostComment": null,
+   "bestReplyComment": null,
+   "accessLevel": "EXTERNAL_PUBLIC",
+   "topics": [
+    {
+     "type": "BOARD",
+     "id": "KR7005930003",
+     "name": "삼성전자"
+    }
+   ],
+   "status": "NORMAL",
+   "authorUserProfileId": 900005
+  },
+  {
+   "type": "USER_COMMENT",
+   "commentId": 1004,
+   "author": {
+    "userProfileId": 900004,
+    "nickname": "합성닉네임4",
+    "profilePictureUrl": "https://example.invalid/profile.png",
+    "type": "USER",
+    "badge": {
+     "title": "1억대 자산가",
+     "color": "green",
+     "iconImageUrl": null
+    },
+    "shortDescription": "합성 자기소개",
+    "description": null
+   },
+   "parentId": null,
+   "message": {
+    "title": "손절",
+    "message": "더 못 버티겠어서 정리",
+    "representEmoji": ""
+   },
+   "board": {
+    "topic": "삼성전자",
+    "subjectId": "KR7005930003",
+    "subjectType": "STOCK",
+    "stockCode": "A005930",
+    "logoImageUrl": "https://example.invalid/logo.png"
+   },
+   "image": null,
+   "media": [],
+   "statistic": {
+    "likeCount": 1,
+    "replyCount": 0,
+    "repostCount": 0,
+    "readCount": 10,
+    "followerCount": 5,
+    "isLike": false,
+    "isBookmarked": false,
+    "isFollowing": false,
+    "isMyProfile": false
+   },
+   "vote": null,
+   "execution": {
+    "stockCode": "A005930",
+    "stockName": "삼성전자",
+    "orderSide": "SELL",
+    "quantity": 12,
+    "amountKrw": 2604000,
+    "amountUsd": null,
+    "averageExecutionPriceKrw": 217000,
+    "averageExecutionPriceUsd": null,
+    "executedAt": "2026-10-16T09:01:10",
+    "profitAmountKrw": null,
+    "productType": "KR_STOCK",
+    "isSavings": false,
+    "isAbnormal": false
+   },
+   "disclosure": null,
+   "holding": {
+    "shareHoldingStatus": null
+   },
+   "edited": false,
+   "createdAt": "2026-10-16T14:10:00.5+09:00",
+   "updatedAt": "2026-10-16T14:10:00.5+09:00",
+   "isRepost": false,
+   "repostComment": null,
+   "bestReplyComment": null,
+   "accessLevel": "EXTERNAL_PUBLIC",
+   "topics": [
+    {
+     "type": "BOARD",
+     "id": "KR7005930003",
+     "name": "삼성전자"
+    }
+   ],
+   "status": "NORMAL",
+   "authorUserProfileId": 900004
+  }
+ ],
+ "key": 1004,
+ "totalCount": 6,
+ "hasNext": true
+}

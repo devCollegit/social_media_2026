@@ -1,0 +1,281 @@
+{
+ "results": [
+  {
+   "type": "USER_COMMENT",
+   "commentId": 1004,
+   "author": {
+    "userProfileId": 900004,
+    "nickname": "합성닉네임4",
+    "profilePictureUrl": "https://example.invalid/profile.png",
+    "type": "USER",
+    "badge": {
+     "title": "1억대 자산가",
+     "color": "green",
+     "iconImageUrl": null
+    },
+    "shortDescription": "합성 자기소개",
+    "description": null
+   },
+   "parentId": null,
+   "message": {
+    "title": "손절",
+    "message": "더 못 버티겠어서 정리",
+    "representEmoji": ""
+   },
+   "board": {
+    "topic": "삼성전자",
+    "subjectId": "KR7005930003",
+    "subjectType": "STOCK",
+    "stockCode": "A005930",
+    "logoImageUrl": "https://example.invalid/logo.png"
+   },
+   "image": null,
+   "media": [],
+   "statistic": {
+    "likeCount": 2,
+    "replyCount": 0,
+    "repostCount": 0,
+    "readCount": 10,
+    "followerCount": 5,
+    "isLike": false,
+    "isBookmarked": false,
+    "isFollowing": false,
+    "isMyProfile": false
+   },
+   "vote": null,
+   "execution": {
+    "stockCode": "A005930",
+    "stockName": "삼성전자",
+    "orderSide": "SELL",
+    "quantity": 12,
+    "amountKrw": 2604000,
+    "amountUsd": null,
+    "averageExecutionPriceKrw": 217000,
+    "averageExecutionPriceUsd": null,
+    "executedAt": "2026-10-16T09:01:10",
+    "profitAmountKrw": null,
+    "productType": "KR_STOCK",
+    "isSavings": false,
+    "isAbnormal": false
+   },
+   "disclosure": null,
+   "holding": {
+    "shareHoldingStatus": null
+   },
+   "edited": false,
+   "createdAt": "2026-10-16T14:10:00.5+09:00",
+   "updatedAt": "2026-10-16T14:10:00.5+09:00",
+   "isRepost": false,
+   "repostComment": null,
+   "bestReplyComment": null,
+   "accessLevel": "EXTERNAL_PUBLIC",
+   "topics": [
+    {
+     "type": "BOARD",
+     "id": "KR7005930003",
+     "name": "삼성전자"
+    }
+   ],
+   "status": "NORMAL",
+   "authorUserProfileId": 900004
+  },
+  {
+   "type": "USER_COMMENT",
+   "commentId": 1003,
+   "author": {
+    "userProfileId": 900003,
+    "nickname": "합성닉네임3",
+    "profilePictureUrl": "https://example.invalid/profile.png",
+    "type": "USER",
+    "badge": {
+     "title": "1억대 자산가",
+     "color": "green",
+     "iconImageUrl": null
+    },
+    "shortDescription": "합성 자기소개",
+    "description": null
+   },
+   "parentId": null,
+   "message": {
+    "title": "",
+    "message": "",
+    "representEmoji": ""
+   },
+   "board": {
+    "topic": "삼성전자",
+    "subjectId": "KR7005930003",
+    "subjectType": "STOCK",
+    "stockCode": "A005930",
+    "logoImageUrl": "https://example.invalid/logo.png"
+   },
+   "image": null,
+   "media": [],
+   "statistic": {
+    "likeCount": 0,
+    "replyCount": 0,
+    "repostCount": 0,
+    "readCount": 10,
+    "followerCount": 5,
+    "isLike": false,
+    "isBookmarked": false,
+    "isFollowing": false,
+    "isMyProfile": false
+   },
+   "vote": null,
+   "execution": null,
+   "disclosure": null,
+   "holding": {
+    "shareHoldingStatus": "HOLDING"
+   },
+   "edited": false,
+   "createdAt": "2026-10-15T20:00:00.000000001+09:00",
+   "updatedAt": "2026-10-15T20:00:00.000000001+09:00",
+   "isRepost": false,
+   "repostComment": null,
+   "bestReplyComment": null,
+   "accessLevel": "EXTERNAL_PUBLIC",
+   "topics": [
+    {
+     "type": "BOARD",
+     "id": "KR7005930003",
+     "name": "삼성전자"
+    }
+   ],
+   "status": "NORMAL",
+   "authorUserProfileId": 900003
+  },
+  {
+   "type": "USER_COMMENT",
+   "commentId": 1002,
+   "author": {
+    "userProfileId": 900002,
+    "nickname": "합성닉네임2",
+    "profilePictureUrl": "https://example.invalid/profile.png",
+    "type": "USER",
+    "badge": {
+     "title": "1억대 자산가",
+     "color": "green",
+     "iconImageUrl": null
+    },
+    "shortDescription": "합성 자기소개",
+    "description": null
+   },
+   "parentId": null,
+   "message": {
+    "title": "삭제된 글",
+    "message": "규칙 위반",
+    "representEmoji": ""
+   },
+   "board": {
+    "topic": "삼성전자",
+    "subjectId": "KR7005930003",
+    "subjectType": "STOCK",
+    "stockCode": "A005930",
+    "logoImageUrl": "https://example.invalid/logo.png"
+   },
+   "image": null,
+   "media": [],
+   "statistic": {
+    "likeCount": 0,
+    "replyCount": 0,
+    "repostCount": 0,
+    "readCount": 10,
+    "followerCount": 5,
+    "isLike": false,
+    "isBookmarked": false,
+    "isFollowing": false,
+    "isMyProfile": false
+   },
+   "vote": null,
+   "execution": null,
+   "disclosure": null,
+   "holding": {
+    "shareHoldingStatus": "HOLDING"
+   },
+   "edited": false,
+   "createdAt": "2026-10-15T10:00:00+09:00",
+   "updatedAt": "2026-10-15T10:00:00+09:00",
+   "isRepost": false,
+   "repostComment": null,
+   "bestReplyComment": null,
+   "accessLevel": "EXTERNAL_PUBLIC",
+   "topics": [
+    {
+     "type": "BOARD",
+     "id": "KR7005930003",
+     "name": "삼성전자"
+    }
+   ],
+   "status": "DELETED",
+   "authorUserProfileId": 900002
+  },
+  {
+   "type": "USER_COMMENT",
+   "commentId": 1001,
+   "author": {
+    "userProfileId": 900001,
+    "nickname": "합성닉네임1",
+    "profilePictureUrl": "https://example.invalid/profile.png",
+    "type": "USER",
+    "badge": {
+     "title": "1억대 자산가",
+     "color": "green",
+     "iconImageUrl": null
+    },
+    "shortDescription": "합성 자기소개",
+    "description": null
+   },
+   "parentId": null,
+   "message": {
+    "title": "오늘 시초가",
+    "message": "갭하락 무섭네요 ㅠㅠ",
+    "representEmoji": ""
+   },
+   "board": {
+    "topic": "삼성전자",
+    "subjectId": "KR7005930003",
+    "subjectType": "STOCK",
+    "stockCode": "A005930",
+    "logoImageUrl": "https://example.invalid/logo.png"
+   },
+   "image": null,
+   "media": [],
+   "statistic": {
+    "likeCount": 4,
+    "replyCount": 0,
+    "repostCount": 0,
+    "readCount": 10,
+    "followerCount": 5,
+    "isLike": false,
+    "isBookmarked": false,
+    "isFollowing": false,
+    "isMyProfile": false
+   },
+   "vote": null,
+   "execution": null,
+   "disclosure": null,
+   "holding": {
+    "shareHoldingStatus": null
+   },
+   "edited": false,
+   "createdAt": "2026-10-15T09:00:01.999999999+09:00",
+   "updatedAt": "2026-10-15T09:00:01.999999999+09:00",
+   "isRepost": false,
+   "repostComment": null,
+   "bestReplyComment": null,
+   "accessLevel": "EXTERNAL_PUBLIC",
+   "topics": [
+    {
+     "type": "BOARD",
+     "id": "KR7005930003",
+     "name": "삼성전자"
+    }
+   ],
+   "status": "NORMAL",
+   "authorUserProfileId": 900001
+  }
+ ],
+ "key": 1001,
+ "totalCount": 6,
+ "hasNext": false
+}

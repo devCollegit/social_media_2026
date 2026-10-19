@@ -1,0 +1,37 @@
+# 김정기 데이터 수집 설정
+# 상대 경로는 이 파일이 있는 폴더(김정기/data_collection/) 기준이다.
+
+paths:
+  posts_dir: data/raw/posts          # 커뮤니티 CSV (조현호 collect.manual_csv 입력 형식)
+  market_dir: data/raw/market        # 시세 CSV (조현호 market.source: csv 입력 형식)
+  meta_dir: data/raw/meta            # 종목 마스터·후보 목록
+  state_dir: state                   # 증분 수집 상태
+  logs_dir: logs
+
+# 수집 대상 종목. 3단계 예비 수집으로 확정하기 전까지는 임시값이다.
+stocks:
+  - "005930"   # 삼성전자
+  - "000660"   # SK하이닉스
+  - "035720"   # 카카오
+
+period:
+  start: "2026-07-01"
+  end: null                          # null 이면 오늘
+
+community:
+  # 수집 가능성 점검표 5절: 토스증권 이용 허락 전에는 네트워크 수집을 하지 않는다.
+  # 허락을 받으면 조건을 점검표에 기록한 뒤 true 로 바꾼다.
+  collection_approved: false
+  source: fixture                    # fixture: 저장된 JSON 으로 동작 점검 / toss: 허락 후 구현
+  fixture_dir: tests/fixtures/toss
+  min_interval_sec: 2.0              # 요청 사이 최소 간격
+  max_retries: 4
+  backoff_base_sec: 2.0              # 재시도 대기: base * 2^n (+ 지터)
+  backoff_max_sec: 60.0
+  include_replies: true
+
+market:
+  # pykrx 의 거래대금·시가총액·상장주식수·지수·업종 조회는 KRX 정보데이터시스템 로그인이 필요하다.
+  # 환경변수 KRX_ID / KRX_PW 가 없으면 해당 컬럼은 비우고 지수·종목 목록은 FinanceDataReader 로 받는다.
+  market_index: KOSPI                # index.csv 의 close 컬럼에 넣을 지수 (KOSPI | KOSDAQ)
+  request_interval_sec: 1.0
