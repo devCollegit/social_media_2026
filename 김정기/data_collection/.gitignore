@@ -9,3 +9,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+# 연동 점검 산출물 (integration/ 아래 합성 입력과 조현호 파이프라인 결과)
+integration/work/
+integration/runs/
+integration/output/

@@ -1,0 +1,23 @@
+# 연동 점검용 수집기 설정. 경로는 이 파일이 있는 integration/ 기준.
+paths:
+  posts_dir: work/posts
+  market_dir: ../data/raw/market
+  meta_dir: ../data/raw/meta
+  state_dir: work/state
+  logs_dir: work/logs
+stocks: ["005930", "000660", "035720"]
+period:
+  start: "2026-07-01"
+  end: "2026-10-19"
+community:
+  collection_approved: false
+  source: fixture
+  fixture_dir: work/fixtures
+  min_interval_sec: 2.0
+  max_retries: 4
+  backoff_base_sec: 2.0
+  backoff_max_sec: 60.0
+  include_replies: true
+market:
+  market_index: KOSPI
+  request_interval_sec: 1.0

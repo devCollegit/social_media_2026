@@ -62,6 +62,12 @@ cron 예시 (평일 16:10):
 
 실패한 종목이 있으면 종료 코드 1로 끝난다.
 
+### 조현호 파이프라인 연동 점검
+
+```bash
+./integration/run_check.sh     # 산출물은 integration/ 아래에만 생긴다 (git 제외)
+```
+
 ### 테스트
 
 ```bash
@@ -122,6 +128,11 @@ data_collection/
 │   ├── fetchers.py        FixtureFetcher (네트워크 없음) / TossFetcher (보류)
 │   ├── run.py             종목 1개 수집 절차 (페이지 넘김, 증분 중단, 댓글)
 │   └── cli.py             cron 진입점
+├── integration/           조현호 파이프라인 연동 점검 (합성 커뮤니티 + 실제 시세 → collect~merge)
+│   ├── run_check.sh       한 번에 실행
+│   ├── make_synthetic_pages.py
+│   ├── collector.yaml
+│   └── config/pipeline.yaml  조현호 설정 복사본 (기간·입력 경로만 변경)
 ├── tests/                 pytest + 합성 fixture
 └── docs/
     ├── 수집가능성_점검표.md
