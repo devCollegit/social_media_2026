@@ -1,145 +1,137 @@
-# 데이터 수집 (김정기)
+# 커뮤니티 데이터 수집·분석과 감성 검수 안내
 
-토스증권 커뮤니티 글·댓글과 KRX 시세를 모아 조현호 파이프라인(`조현호/toss_sentiment/`) 입력 형식으로 저장한다.
+이 프로젝트는 **주식 커뮤니티 글의 감정과 주가 움직임이 어떤 관계인지** 살펴보는 팀 과제다.
+이 폴더는 글·댓글과 시세를 모으고, 분석용 파일을 만들며, 사람이 감정 분류를 확인할 수 있는 도구를 제공한다.
 
-| 구성 | 상태 |
+**김정기의 전달 범위는 데이터 수집·코드·도구·문서다. 사람 검수는 팀이 지정할 검수 담당자의 업무이며, 담당자 이름은 아직 정하지 않았다.**
+현재 데이터로 예비 분석은 실행했지만, 감정을 정확하게 분류하는지는 사람 검수로 확인해야 한다.
+
+## 처음 읽는 팀원은 여기서 시작
+
+| 하고 싶은 일 | 읽을 문서 |
 | --- | --- |
-| `market/` 시세·지수·종목 마스터 | 동작함 |
-| `collector/` 커뮤니티 파서·저장·증분·재시도 | 동작함 (저장된 합성 JSON으로만 점검) |
-| `collector/` 토스증권 네트워크 호출 | **보류.** 이용 허락 확인 전 ([수집가능성 점검표](docs/수집가능성_점검표.md)) |
+| 프로젝트가 무엇인지 이해하기 | 이 README의 흐름도와 현재 상태 |
+| 무엇을 어떻게 검수할지 알기 | [검수 업무 명세](docs/검수명세.md) |
+| 내 컴퓨터에서 검수 화면 열기 | [검수 도구 실행 README](review_tool/README.md) |
+| 수집·분석의 결정과 변경 이력 확인 | [개발기록](docs/개발기록.md), [작업이관](docs/작업이관.md) |
+| 코딩 에이전트로 코드 수정하기 | [AGENTS.md](AGENTS.md) |
 
-코딩 에이전트(Codex 등)로 이어서 작업할 때는 [AGENTS.md](AGENTS.md) 를 먼저 읽게 한다.
+## 전체 흐름: 글이 어떻게 연구 결과가 되는가?
 
-## 설치
+```mermaid
+flowchart TD
+    A["토스 커뮤니티 글·댓글"] --> B["수집·정제<br/>필요한 정보만 저장하고 반복 글 등을 정리"]
+    B --> C["사전 기반 감성 분류<br/>긍정 · 중립 · 부정"]
+    C --> D["거래일별 감성지수<br/>그날의 긍정·부정 글 비중 요약"]
+    M["KRX 시세<br/>주가 · 거래량 · 시장지수"] --> E["감성 + 시세 합치기"]
+    D --> E
+    E --> F["상관·회귀·예측 진단<br/>현재는 예비 결과"]
+    B --> R["무작위 검수 표본 300건"]
+    R --> H["검수 담당자가 본문과 맥락을 읽고 라벨 입력"]
+    H --> G["사람 검수 결과와 자동 분류 비교"]
+    C --> G
+    G --> I["분류 방식 개선·별도 표본 평가 후 재분석"]
+```
+
+사전 기반 분류는 정해 둔 단어·표현으로 감정을 계산하는 기준선이다. 사람이 읽는 것처럼 맥락을 모두 이해하지는 못한다.
+감성지수는 `(긍정 수 − 부정 수) ÷ 전체 글·댓글 수`로 계산한다. 중립도 분모에 포함된다.
+글은 종가 시각 15:30을 기준으로 거래일에 배정하며, 시세 달력의 마지막 거래일 뒤에 배정될 글은 분석에서 제외된다.
+
+## 현재 어디까지 완료했나? (2026-10-21 기록)
+
+| 영역 | 현재 결과 | 해석 |
+| --- | --- | --- |
+| 수집 | 300종목 예비 조사 후 최종 2종목 선정 | 포스코퓨처엠 003670, 에코프로머티 450080 |
+| 분석 기간 | 2026-07-01~10-20, 종목별 74거래일 | 원고 목표 3~5종목·약 6개월에는 아직 미달 |
+| 글·댓글 | 원자료 7,759건 → 정제 7,632건 | 본문 멘션 제거 후 최신 결과 |
+| 분석 표 | 2종목 × 74거래일 = 148행 | 종목·거래일별 감성 관측률 100% |
+| 프로그램 검증 | 테스트 75개, 합성 연동 6단계 통과 | 프로그램 동작 확인이며 감성 정확도 보증은 아님 |
+| AI 예비 검토 | 300건 중 사전과 114건 일치, 38.0% | **사람 정답 기준 정확도가 아님** |
+| 사람 검수 | 도구·맥락 포함 표본·명세 준비 | 담당자가 입력하고 결과를 제출해야 함 |
+| 분석 결론 | 일부 관계는 분석 조건에 따라 달라짐 | 감성을 추가한 순차 예측의 개선은 확인되지 않음 |
+
+**관측률 100%**는 분석할 날짜에 글이 충분하다는 뜻이다. **분류 정확도 100%**라는 뜻이 아니다.
+검수 현황은 각 담당자의 로컬 저장 상태로 확인한다. 이 문서의 준비 완료를 사람 검수 완료로 읽지 않는다.
+
+## 역할과 전달물
+
+```mermaid
+flowchart LR
+    A["수집·도구 제공<br/>김정기"] -->|"코드·명세 + 별도 검수 CSV"| B["사람 검수<br/>팀에서 담당자 지정"]
+    B -->|"완료 CSV + 메모·검수 조건"| C["성능 평가·보고<br/>분석 담당자"]
+    C --> D["분류 개선 및 연구 결과 정리"]
+```
+
+한 사람이 여러 업무를 맡을 수 있지만, **김정기에게 사람 라벨링을 전제로 요구하지 않는다.**
+이 인계는 문서 준비이며 팀원에게 파일이나 메시지를 자동 전송하는 동작은 아니다.
+
+## 코드와 데이터는 따로 전달한다
+
+```mermaid
+flowchart LR
+    G["GitHub의 코드·README"] --> P["검수 담당자의 컴퓨터"]
+    D["별도로 전달받는 review.csv<br/>Git에 포함되지 않음"] --> P
+    P --> L["127.0.0.1의 검수 화면<br/>해당 컴퓨터에서만 접속"]
+    L --> O["로컬 검수 결과<br/>Git에 올리지 않음"]
+```
+
+저장소를 clone하는 것만으로 실제 글·댓글이나 검수 표본이 생기지는 않는다.
+검수 담당자에게는 아래 파일을 팀이 정한 비공개 방법으로 별도 전달해야 한다.
+
+- `data/labels/human_review_context_20261021/review.csv` — 부모 맥락 포함 미라벨 검수 표본
+- 같은 폴더의 `manifest.json` — 생성 시 입력 지문과 맥락 연결 건수
+- 실행 방법과 검수 기준은 Git의 README·명세로 제공
+
+`.env`와 KRX 계정, 기존 검수자의 `progress.json`, AI 라벨 파일은 신규 독립 검수자에게 함께 넘기지 않는다.
+원자료의 구조화된 닉네임·프로필 ID 멘션은 제거했지만 자유 서술의 개인정보까지 완전 제거했다고 보장하지 않는다.
+
+## 검수 도구 실행 요약
+
+현재 도구는 `fcntl`을 사용하므로 **Linux/macOS에서 실행**한다. Windows는 WSL 환경이 필요하다.
+개발·테스트 환경은 Python 3.13이다. 검수 도구만 실행할 때는 Python 표준 라이브러리만 사용하며
+KRX 로그인, `.env`, 별도 Python 패키지 설치가 필요하지 않다.
 
 ```bash
+# 저장소 루트에서
 cd 김정기/data_collection
+python3 -m review_tool.server
+```
+
+입력 CSV를 준비한 뒤 실행하고, **실행한 컴퓨터의 브라우저**에서 `http://127.0.0.1:8768`을 연다.
+상세 설치, 개인별 저장 폴더, 종료·재개, 오류 해결은 [실행 README](review_tool/README.md)를 따른다.
+
+## 개발·분석을 이어갈 때
+
+```bash
+# 김정기/data_collection 안에서 실행
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-```
-
-### KRX 로그인 (선택)
-
-pykrx 1.2.x는 거래대금·시가총액·상장주식수·지수·업종을 조회할 때 KRX 정보데이터시스템 로그인이 필요하다.
-<https://data.krx.co.kr> 에서 무료 회원가입 후 **본인이 직접** 환경변수로 넣는다. 파일에 적거나 커밋하지 않는다.
-
-```bash
-export KRX_ID=...
-export KRX_PW=...
-```
-
-로그인이 없으면 수정주가 OHLCV만 pykrx로 받고, 지수·종목 마스터는 FinanceDataReader로 받으며
-`value`, `market_cap`, `shares` 컬럼은 비워 둔다.
-
-## 실행
-
-### 시세
-
-```bash
-.venv/bin/python -m market.cli prices                       # config.yaml 의 종목·기간
-.venv/bin/python -m market.cli prices --stocks 005930,000660 --start 2026-07-01
-.venv/bin/python -m market.cli prices --stocks-file data/raw/meta/candidates.csv
-.venv/bin/python -m market.cli master                       # 종목 마스터
-.venv/bin/python -m market.cli candidates --top 300         # 커뮤니티 예비 수집 후보
-```
-
-장중에 실행하면 당일 봉이 미완성 값으로 들어간다. 장 마감(15:30) 이후, 16시 이후 실행을 권장한다.
-
-### 커뮤니티
-
-```bash
-.venv/bin/python -m collector.cli run                       # 증분 수집 (설정의 source, 기본 fixture)
-.venv/bin/python -m collector.cli run --stocks 005930 --full
-.venv/bin/python -m collector.cli run --since 2026-10-01T00:00:00+09:00
-```
-
-`--source toss` 는 `config.yaml` 의 `community.collection_approved: true` 가 아니면 실행되지 않는다.
-
-cron 예시 (평일 16:10):
-
-```cron
-10 16 * * 1-5  cd <repo>/김정기/data_collection && .venv/bin/python -m market.cli prices >> logs/cron.log 2>&1
-20 16 * * 1-5  cd <repo>/김정기/data_collection && .venv/bin/python -m collector.cli run >> logs/cron.log 2>&1
-```
-
-실패한 종목이 있으면 종료 코드 1로 끝난다.
-
-### 조현호 파이프라인 연동 점검
-
-```bash
-./integration/run_check.sh     # 산출물은 integration/ 아래에만 생긴다 (git 제외)
-```
-
-### 테스트
-
-```bash
+.venv/bin/pip install -r ../../조현호/toss_sentiment/requirements.txt
 .venv/bin/python -m pytest -q
 ```
 
-네트워크를 쓰지 않는다. `tests/fixtures/toss/` 의 합성 JSON(관찰한 응답 구조를 본뜬 가짜 데이터)을 사용하며,
-조현호 파이프라인 `s01_collect` 의 정규화 함수를 읽기 전용으로 불러와 출력 CSV가 통과하는지도 확인한다.
+시세를 새로 수집할 때만 `.env.example`을 `.env`로 복사해 **본인이 직접** KRX 인증값을 입력한다.
+기존 셸 환경변수가 `.env`보다 우선하며 실제 인증값을 Git·문서·로그에 남기지 않는다.
 
-## 출력 스키마
+`config.yaml`의 기본 커뮤니티 source는 fixture다. `config.research.yaml`은 실제 공개 API에 요청하는 별도 설정이다.
+검수 담당자는 수집 명령을 실행할 필요가 없다. 수집은 요청 간격·예산·오류 중단을 적용한다.
+토스증권 운영자의 이용 허락 여부는 미확인이며 비로그인 API의 기술적 동작과 구분한다.
+자세한 기록은 [수집가능성 점검표](docs/수집가능성_점검표.md)에 있다.
 
-### `data/raw/posts/<종목코드>.csv` — 조현호 `collect.source: manual_csv` 입력
+## 주요 폴더와 파일 형식
 
-| 컬럼 | 필수 | 설명 |
-| --- | --- | --- |
-| `stock_id` | O | 종목코드 6자리 |
-| `post_id` | O | 글·댓글 ID (토스 `commentId`) |
-| `parent_id` | O | 댓글이면 부모 글 ID, 게시글이면 빈 값 |
-| `text` | O | 제목 + 줄바꿈 + 본문 (제목이 없으면 본문만) |
-| `created_at` | O | 작성 시각, `YYYY-MM-DDTHH:MM:SS.ffffff+09:00` 고정 형식 (KST) |
-| `collected_at` | | 수집 시각 (KST) |
-| `source` | | `tossinvest` |
-| `badge` | 추가 | 매수·매도 체결 인증. `BUY` / `SELL` / 빈 값 |
-| `like_count` | 추가 | 공감 수 (마지막 수집 시점 값) |
-| `reply_count` | 추가 | 댓글 수 (마지막 수집 시점 값) |
-| `is_holder` | 추가 | 작성 시점 해당 종목 보유 표시("주주") 1/0 |
-
-닉네임·프로필 ID·프로필 사진·자기소개·작성자 자산 뱃지·체결 수량·금액은 **파서 단계에서 버리고 저장하지 않는다.**
-같은 `post_id` 가 다시 수집되면 행을 늘리지 않고 공감 수 등 최신 값으로 바꾼다.
-
-### `data/raw/market/` — 조현호 `market.source: csv` 입력
-
-| 파일 | 컬럼 |
+| 경로 | 역할 |
 | --- | --- |
-| `<종목코드>.csv` | `date`, `close`(수정주가), `volume`, `open`, `high`, `low`, `change`(소수), `value`(거래대금), `market_cap`, `shares` |
-| `index.csv` | `date`, `close`(설정 `market.market_index`, 기본 KOSPI), `kospi_close/volume/value`, `kosdaq_close/volume/value` |
+| `collector/` | 목록·댓글 수집, 파서, 저장·재개, 활동량 조사 |
+| `market/` | KRX/FDR 시세·종목 메타데이터 |
+| `integration/` | 외부 분석 코드 읽기/import, 격리된 연동 실행, 검수 표본 생성 |
+| `analysis/` | 통계 민감도·시계열 진단·AI 일치도 비교 |
+| `review_tool/` | 사람이 사용하는 검수 웹 화면과 로컬 서버 |
+| `tests/` | 합성 데이터 기반 자동 테스트 |
+| `data/`, `state/`, `logs/` | 실제 입력·결과·상태. **Git 제외** |
 
-### `data/raw/meta/`
+커뮤니티 CSV의 필수 컬럼은 `stock_id, post_id, parent_id, text, created_at`이다.
+종목·글 ID는 문자열로 보존하고, 작성 시각은 KST 고정 형식을 쓴다.
+검수 입력·완료 파일의 컬럼은 [검수 명세](docs/검수명세.md)에, 수집기 전체 출력 계약은 [AGENTS.md](AGENTS.md)에 있다.
 
-| 파일 | 내용 |
-| --- | --- |
-| `stock_master.csv` | `stock_id`, `isin`(토스 커뮤니티 종목 식별자와 같음), `name`, `market`, `industry`(KSIC 업종), `krx_sector`(KRX 로그인 시), `listing_date`, `*_snapshot`(조회 시점 시총·주식수·거래대금) |
-| `candidates.csv` | 보통주 중 거래대금·시총 상위 N종목. 커뮤니티 예비 수집 후보 |
-
-## 구조
-
-```
-data_collection/
-├── AGENTS.md              코딩 에이전트용 인계 문서 (규칙·상태·다음 작업)
-├── config.yaml            경로, 종목, 기간, 요청 간격·재시도 설정
-├── settings.py            설정 로딩·로깅
-├── market/
-│   ├── sources.py         pykrx / FinanceDataReader 소스
-│   └── cli.py             prices / master / candidates
-├── collector/
-│   ├── parser.py          응답 JSON → CSV 행 (개인정보 화이트리스트 제거, 시각 정규화)
-│   ├── store.py           종목별 CSV upsert, 증분 상태, 실패 기록
-│   ├── http.py            요청 간격(≥1초)·지수 백오프 재시도
-│   ├── fetchers.py        FixtureFetcher (네트워크 없음) / TossFetcher (보류)
-│   ├── run.py             종목 1개 수집 절차 (페이지 넘김, 증분 중단, 댓글)
-│   └── cli.py             cron 진입점
-├── integration/           조현호 파이프라인 연동 점검 (합성 커뮤니티 + 실제 시세 → collect~merge)
-│   ├── run_check.sh       한 번에 실행
-│   ├── make_synthetic_pages.py
-│   ├── collector.yaml
-│   └── config/pipeline.yaml  조현호 설정 복사본 (기간·입력 경로만 변경)
-├── tests/                 pytest + 합성 fixture
-└── docs/
-    ├── 수집가능성_점검표.md
-    └── 개발기록.md
-```
-
-`data/`, `logs/`, `state/`, `.env`, `.venv/` 는 `.gitignore` 로 제외한다.
+현재 코드는 개인 fork의 `kimjunggee-data-collection` 브랜치로 전달한다. 이번 요청은 commit/push이며 PR 생성은 포함하지 않는다.
