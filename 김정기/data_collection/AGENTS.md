@@ -1,5 +1,7 @@
 # AGENTS.md — 김정기 데이터 수집 파이프라인 (Codex 인계 문서)
 
+> 최신 상태 (2026-10-21): 첫 300건 사람 검수 완료. 기존 분류 일치율 58.0%, 실험 후보의 개발 표본 일치율 61.0%. 기본 분류기는 유지하며 후속 300건으로 검증 예정. 자동 테스트 78 passed. [결과와 후속 평가 계획](docs/사람검수_후속계획.md)
+
 이 문서는 이 폴더(`김정기/data_collection/`)에서 일하는 코딩 에이전트(Codex 등)용 인계 문서다.
 **작업을 시작하기 전에 끝까지 읽는다.** 사람용 상세 기록은 `docs/` 에 있다.
 
@@ -48,7 +50,7 @@ cd 김정기/data_collection          # 모든 명령은 여기서 실행 (setti
 python3 -m venv .venv               # 이미 있으면 생략
 .venv/bin/pip install -r requirements.txt
 .venv/bin/pip install -r ../../조현호/toss_sentiment/requirements.txt   # 연동 점검(integration/)용: statsmodels 등
-.venv/bin/python -m pytest -q       # 기대값: 75 passed, 네트워크 불필요
+.venv/bin/python -m pytest -q       # 기대값: 78 passed, 네트워크 불필요
 ```
 
 - Python 3.13, pandas 2.3, pykrx 1.2.9, finance-datareader 0.9.x
@@ -96,7 +98,7 @@ data_collection/
 │   ├── collector.yaml
 │   └── config/pipeline.yaml   조현호 설정 복사본 (기간·source·input_dir 만 변경)
 ├── review_tool/           로컬 사람 검수 UI·서버·사용 안내
-├── tests/                 pytest 75건 + fixtures/toss/005930/*.json (합성, 실제 사용자 데이터 아님)
+├── tests/                 pytest 78건 + fixtures/toss/005930/*.json (합성, 실제 사용자 데이터 아님)
 └── docs/
     ├── 수집가능성_점검표.md   약관·robots·API 조사, 응답 구조 관찰, 보류 결론
     ├── 개발기록.md           결정·발견한 문제·검증 결과 (날짜별로 이어 씀)
@@ -135,11 +137,11 @@ data_collection/
 | 단계 | 상태 |
 | --- | --- |
 | 1 수집 가능성 점검 | 비로그인 공개 API 실동작 확인. 사용자 지시로 제한된 실제 수집 진행. 운영자의 이용 허락 여부는 미확인(점검표 부록 D) |
-| 2 수집기 | `TossFetcher` 구현 및 합성 응답·연동 검증 완료. 전체 75 passed. 기본 source는 fixture |
+| 2 수집기 | `TossFetcher` 구현 및 합성 응답·연동 검증 완료. 전체 78 passed. 기본 source는 fixture |
 | 3 시세 | KRX 로그인 검증 완료(2026-10-21). 3종목 × 74거래일(07-01~10-20)의 `value, market_cap, shares` 결측 0. KOSPI/KOSDAQ 2,762종목 `krx_sector` 결측 0. KONEX 105종목은 업종 조회 대상 밖 |
 | 3 종목 선정 | 300종목 하루 예비 조사: 통과 134, 추가 관찰 166. 기간 확장 검증 3종목 중 003670·450080은 112달력일 평균 ≥20건 확인. 267250은 관찰량 미달로 비교용 보존 |
 | 4 연동 검증 | 실데이터 최종 2종목 7,759행 → merge 148행, 각 74/74일 커버리지 100%. 비교용 포함 3종목은 9,232행 → 222행. 개발기록 16절 |
-| market 오프라인 테스트 | 컬럼·등락률·시장명·후보 필터·인증정보 출력 차단 검증 완료. 전체 테스트 75 passed |
+| market 오프라인 테스트 | 컬럼·등락률·시장명·후보 필터·인증정보 출력 차단 검증 완료. 전체 테스트 78 passed |
 | 비로그인 API 검증 | 새 fetcher의 3종목 목록·댓글 확인, 실제 댓글 3페이지 31건 중복 없이 확인. 후보 300종목 및 검증용 3종목 과거 수집으로 확장 |
 | 후속 검증 | 멘션 제거 후 정제 7,632행, 전체8단계 재실행. HAC·순차 예측·AI 300건 검토 완료. 최신 경로는 개발기록19절 |
 | Git | 사용자 요청 범위는 이 브랜치의 코드·문서 커밋 및 원본 origin push. PR 생성 제외. 실제 동기화는 `git status -sb`로 확인 |
@@ -153,12 +155,14 @@ data_collection/
 2026-10-21 최신 지시: 사람 검수는 김정기의 역할이 아니다. 앞선 역할 통합 지시 중 사람 라벨링 부분은 이 지시로 대체한다. 팀 검수 담당자(미지정)가 수행하도록 README·검수 명세·실행 안내로 인계한다. 김정기에게 라벨 입력을 요구하지 않는다.
 기존 외부 소스는 읽기/import로 재사용하고 이 폴더에서 전체 분석을 수행한다.
 `state/full_analysis_20261021`에 8단계 실행 완료. 검수 표본 300건은
-`data/labels/review_20261021/review.csv`에 생성했다. 강건성 점검은 `state/robustness_20261021`에 완료했다(개발기록 18절). 후속 시계열 진단과 AI 60건 예비 검수까지 완료했다(개발기록 19절). 본문 멘션 제거 후 최신 결과는 `state/temporal_20261021/검증요약.md`에 있다. 300건 AI 검토는 완료했다(개발기록 20절). 사전과 일치 38.0%이며 사람 정답 정확도가 아니다. 사람 정답 검증은 미완료다. 최신 검수본은 `data/labels/human_review_context_20261021`이다.
-사람 검수가 없으므로 정확도·독립 평가자 간 일치도는 미측정이다. 두 종목·약 3.7개월의
+`data/labels/review_20261021/review.csv`에 생성했다. 강건성 점검은 `state/robustness_20261021`에 완료했다(개발기록 18절). 후속 시계열 진단과 AI 60건 예비 검수까지 완료했다(개발기록 19절). 본문 멘션 제거 후 최신 결과는 `state/temporal_20261021/검증요약.md`에 있다. 300건 AI 검토는 완료했다(개발기록 20절). 사전과 일치 38.0%이며 사람 정답 정확도가 아니다. 첫 300건 단독 사람 검수 완료(58%, Macro-F1 0.3561). 후보 후속 검증은 미완료다. 최신 검수본은 `data/labels/human_review_context_20261021`이다.
+첫 300건 사람 기준 일치율은 측정했고, 독립 평가자 간 일치도는 미측정이다. 두 종목·약 3.7개월의
 예비 분석이며 원고의 3~5종목·약 6개월 설계와 차이가 있다.
 
 
-0. **팀 검수 담당자에게 인계할 다음 작업: 사람 검수** — `.venv/bin/python -m review_tool.server`로 실행한다. `README.md`, `docs/검수명세.md`, `review_tool/README.md` 참고. 지정된 검수 담당자가 사람 라벨을 직접 입력하며 완료 후 별도 분석 설정에 연결한다.
+0. **다음 작업: 고정 후보를 후속 300건으로 평가** — `docs/사람검수_후속계획.md`의 별도 입력·output·포트 8769 사용. 기존 결과 보존.
+
+   **첫 검수 실행 방법(완료 기록)** — `.venv/bin/python -m review_tool.server`로 실행한다. `README.md`, `docs/검수명세.md`, `review_tool/README.md` 참고. 지정된 검수 담당자가 사람 라벨을 직접 입력하며 완료 후 별도 분석 설정에 연결한다.
 
 1. **PR 생성 안내·리뷰 대응(현재 요청 범위 밖)** — 본문 초안은 `docs/작업이관.md` 6절 (2026-10-21 연동 점검까지 반영됨).
    PR 생성은 사용자가 웹에서 한다 (gh CLI 없음). 리뷰 코멘트가 오면 반영 후 원본 origin으로 push. 링크:
