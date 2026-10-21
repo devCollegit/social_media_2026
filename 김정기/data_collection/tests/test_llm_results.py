@@ -83,7 +83,23 @@ def test_baseline_compares_same_eligible_and_full_gold_sets():
                              "sentiment": ["중립", "중립", "긍정"]})
     summary, compared = analyze(source, predictions, gold, baseline)
     assert summary["gold"]["n"] == 2
+    assert summary["gold"]["always_neutral_same_subset"]["n"] == 2
     assert summary["gold"]["overall"]["rows"] == 3
     assert summary["baseline"]["same_eligible_subset"]["n"] == 2
     assert summary["baseline"]["overall_gold"]["rows"] == 3
     assert "baseline_sentiment" in compared
+
+
+def test_identical_context_consistency_scopes_stock_and_counts_disagreeing_pairs():
+    from analysis.llm_results import identical_context_consistency
+    source = pd.DataFrame({"stock_id": ["001", "001", "001", "002"],
+        "post_id": ["1", "2", "3", "4"], "text_norm": ["same"]*4,
+        "parent_text": [""]*4, "context_status": ["top_level"]*4})
+    predictions = source[["stock_id", "post_id"]].assign(
+        relevance=["related"]*4, sentiment=["긍정", "긍정", "부정", "긍정"])
+    summary = identical_context_consistency(source, predictions)
+    assert summary["repeated_groups"] == 1
+    assert summary["repeated_rows"] == 3
+    assert summary["joint_stable_groups"] == 0
+    assert summary["total_pairs"] == 3
+    assert summary["matching_pairs"] == 1

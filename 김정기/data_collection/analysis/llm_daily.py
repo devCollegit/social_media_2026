@@ -25,7 +25,13 @@ def aggregate(clean, predictions, market, min_posts=5, allow_partial=False):
         raise ValueError('중복 시세 거래일')
     joined = clean[KEYS + ['created_at']].merge(
         predictions[KEYS + ['relevance', 'sentiment']], on=KEYS, how='left', validate='one_to_one')
-    joined['created_at'] = pd.to_datetime(joined.created_at, utc=True).dt.tz_convert('Asia/Seoul').dt.tz_localize(None)
+    # clean CSV는 한국 현지 naive 시각, 원자료는 offset-aware 시각일 수 있다.
+    def local_timestamp(value):
+        stamp = pd.Timestamp(value)
+        if pd.isna(stamp):
+            raise ValueError('빈 작성 시각')
+        return stamp if stamp.tzinfo is None else stamp.tz_convert('Asia/Seoul').tz_localize(None)
+    joined['created_at'] = pd.to_datetime(joined.created_at.map(local_timestamp))
     if joined.created_at.isna().any():
         raise ValueError('빈 작성 시각')
     rows, unassigned = [], 0

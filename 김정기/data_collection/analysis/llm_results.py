@@ -105,6 +105,24 @@ def _metrics(gold, predicted):
             "macro_f1": sum(f1s) / 3, "per_class_recall": recalls}
 
 
+def identical_context_consistency(source, predictions):
+    """같은 종목·본문·부모 맥락의 중복 글에서 판정 일관성을 기술한다."""
+    merged = source[KEYS + ["text_norm", "parent_text", "context_status"]].merge(
+        predictions[KEYS + ["relevance", "sentiment"]], on=KEYS, validate="one_to_one")
+    groups = [g for _, g in merged.groupby(
+        ["stock_id", "text_norm", "parent_text", "context_status"], dropna=False) if len(g) > 1]
+    total_pairs = sum(len(g) * (len(g)-1) // 2 for g in groups)
+    matching_pairs = 0
+    for g in groups:
+        for count in g.groupby(["relevance", "sentiment"]).size():
+            matching_pairs += int(count * (count-1) // 2)
+    return {"repeated_groups": len(groups), "repeated_rows": sum(len(g) for g in groups),
+        "joint_stable_groups": sum(len(g[["relevance", "sentiment"]].drop_duplicates()) == 1 for g in groups),
+        "matching_pairs": matching_pairs, "total_pairs": total_pairs,
+        "pair_agreement": matching_pairs / total_pairs if total_pairs else None,
+        "limitation": "동일 본문·맥락의 중복 관측 진단. 무작위 재실행 실험이나 객관적 정확도가 아님"}
+
+
 def analyze(source, predictions, gold=None, baseline=None):
     _check_predictions(source, predictions)
     merged = source[KEYS].merge(predictions, on=KEYS, validate="one_to_one")
@@ -120,6 +138,7 @@ def analyze(source, predictions, gold=None, baseline=None):
         "mixed_count": int(merged.sentiment.eq("혼합").sum()),
         "gold": None,
         "baseline": None,
+        "identical_context_consistency": identical_context_consistency(source, predictions),
     }
     comparison = eligible[KEYS + ["relevance", "sentiment", "reason", "evidence", "context_used"]].copy()
     if gold is not None:
@@ -134,6 +153,7 @@ def analyze(source, predictions, gold=None, baseline=None):
         human_rows = gold_joined[gold_joined.label.isin(DIRECTIONAL)]
         summary["gold"] = _metrics(human_rows.label.tolist(), human_rows.sentiment.tolist())
         summary["gold"]["eligible_gold_rows"] = len(human_rows)
+        summary["gold"]["always_neutral_same_subset"] = _metrics(human_rows.label.tolist(), ["중립"] * len(human_rows))
         all_gold = merged.merge(gold[KEYS + ["label"]], on=KEYS, how="inner", validate="one_to_one")
         summary["gold"]["overall"] = {
             "rows": len(all_gold), "matches": int(all_gold.label.eq(all_gold.sentiment).sum()),
