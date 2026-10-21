@@ -140,4 +140,4 @@ python3 -m venv .venv
 종목·글 ID는 문자열로 보존하고, 작성 시각은 KST 고정 형식을 쓴다.
 검수 입력·완료 파일의 컬럼은 [검수 명세](docs/검수명세.md)에, 수집기 전체 출력 계약은 [AGENTS.md](AGENTS.md)에 있다.
 
-현재 코드는 개인 fork의 `kimjunggee-data-collection` 브랜치로 전달한다. 이번 요청은 commit/push이며 PR 생성은 포함하지 않는다.
+현재 개발 저장소는 [팀 원본 저장소](https://github.com/devCollegit/social_media_2026/tree/kimjunggee-data-collection)이며, `kimjunggee-data-collection` 브랜치에서 작업하고 origin으로 push한다. 개인 fork는 개발 대상으로 사용하지 않는다. 이번 요청은 commit/push이며 PR 생성은 포함하지 않는다.

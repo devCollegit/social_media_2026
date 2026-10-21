@@ -8,7 +8,7 @@
 기술적 접근 가능성, 운영자의 이용 허락, 사용자의 작업 승인은 각각 구분해 기록한다.
 
 - 마지막 갱신: 2026-10-21 (Codex 실수집·연동 완료 반영)
-- 브랜치: `kimjunggee-data-collection` (fork 와의 동기화 여부는 `git status -sb` 로 확인)
+- 브랜치: `kimjunggee-data-collection` (origin(팀 원본 저장소)과의 동기화 여부는 `git status -sb` 로 확인)
 - 사용자(담당자): 김정기 — 소셜미디어분석 수업 6조. 수집·코드·도구·문서를 제공한다. 최신 사용자 지시로 사람 검수는 김정기 역할에서 제외하며 팀이 검수 담당자를 지정한다.
 
 ---
@@ -35,7 +35,7 @@
 4. **커밋 금지 대상:** `data/`, `logs/`, `state/`, `.venv/`, `.env`, 쿠키, 토큰, `integration/work|runs|output|data`. (`.gitignore` 에 있음. `git add` 전에 `git status` 로 확인)
 5. **비밀값을 다루지 않는다.** KRX 계정(`KRX_ID`/`KRX_PW`)은 사용자가 직접 셸 또는 이 폴더의 Git 제외 `.env`에 입력한다(사용자 승인으로 허용). 에이전트는 실제 인증값을 읽거나 출력·대신 입력하지 않는다. 인증값을 커밋·로그·문서에 남기지 않는다. GitHub 토큰은 계속 셸에서만 직접 설정한다. `.env.example`에는 빈 값만 둔다. 시세 수집은 `.env`의 KRX 항목만 자동으로 읽고 기존 셸 환경변수를 우선한다.
 6. **서버 부담 금지.** 모든 수집은 순차 실행, 요청 간격 ≥1초(코드가 강제, 기본 2초). 병렬화하지 않는다.
-7. **git:** `main` 에 직접 push 금지. 이 브랜치에서 작업하고 fork 로 push → PR. 커밋 메시지·문서는 **한국어**, 기술 용어는 영어 그대로.
+7. **git:** `main` 에 직접 push 금지. 이 브랜치에서 작업하고 원본 저장소 origin으로 push한다. fork는 개발·push 대상으로 사용하지 않는다. PR은 요청 시에만 생성한다. 커밋 메시지·문서는 **한국어**, 기술 용어는 영어 그대로.
    커밋·push·PR은 해당 작업 요청 범위에 포함된 경우 수행한다.
 8. **단계별 승인 없이 자율 진행한다.** 합리적으로 판단 가능한 구현·수정·테스트·문서 갱신을 이어서 수행하고 결과를 정리한다.
 
@@ -57,12 +57,15 @@ python3 -m venv .venv               # 이미 있으면 생략
 
 ### git remote
 
-| 노트북 | 팀 레포 `devCollegit/social_media_2026` | 개인 fork `junggee9711/social_media_2026` |
+| remote | 저장소 | 용도 |
 | --- | --- | --- |
-| 원래 노트북 | `origin` (읽기만, push 시 403) | `fork` |
-| fork 를 clone 한 경우 | `upstream` | `origin` |
+| origin | devCollegit/social_media_2026 | 개발 기준 및 push 대상 |
+| fork | junggee9711/social_media_2026 | 과거 참조용, 자동 push하지 않음 |
 
-`git remote -v` 로 먼저 확인한다. push 는 항상 **fork** 쪽으로. `junggee9711` 은 팀 레포 쓰기 권한이 없다.
+2026-10-21 초대 수락 후 원본 저장소 브랜치 push 성공으로 쓰기 권한을 확인했다.
+사용자 지시에 따라 앞으로 원본 저장소에서 개발한다.
+현재 브랜치는 `origin/kimjunggee-data-collection`을 추적하며 기본 push 대상도 origin이다.
+새 checkout에서도 `git remote -v`로 URL을 확인한다.
 
 ---
 
@@ -139,7 +142,7 @@ data_collection/
 | market 오프라인 테스트 | 컬럼·등락률·시장명·후보 필터·인증정보 출력 차단 검증 완료. 전체 테스트 75 passed |
 | 비로그인 API 검증 | 새 fetcher의 3종목 목록·댓글 확인, 실제 댓글 3페이지 31건 중복 없이 확인. 후보 300종목 및 검증용 3종목 과거 수집으로 확장 |
 | 후속 검증 | 멘션 제거 후 정제 7,632행, 전체8단계 재실행. HAC·순차 예측·AI 300건 검토 완료. 최신 경로는 개발기록19절 |
-| Git | 사용자 요청 범위는 이 브랜치의 코드·문서 커밋 및 fork push. PR 생성 제외. 실제 동기화는 `git status -sb`로 확인 |
+| Git | 사용자 요청 범위는 이 브랜치의 코드·문서 커밋 및 원본 origin push. PR 생성 제외. 실제 동기화는 `git status -sb`로 확인 |
 | 검수 역할 | 김정기는 수집·도구 제공. 사람 검수는 팀이 지정할 담당자 업무. 명세는 `docs/검수명세.md` |
 | 사람 검수 도구 | `python -m review_tool.server` → `http://127.0.0.1:8768`. 저장·재개·보류·완료 CSV 내보내기 구현. 데이터는 Git 제외 |
 
@@ -158,8 +161,8 @@ data_collection/
 0. **팀 검수 담당자에게 인계할 다음 작업: 사람 검수** — `.venv/bin/python -m review_tool.server`로 실행한다. `README.md`, `docs/검수명세.md`, `review_tool/README.md` 참고. 지정된 검수 담당자가 사람 라벨을 직접 입력하며 완료 후 별도 분석 설정에 연결한다.
 
 1. **PR 생성 안내·리뷰 대응(현재 요청 범위 밖)** — 본문 초안은 `docs/작업이관.md` 6절 (2026-10-21 연동 점검까지 반영됨).
-   PR 생성은 사용자가 웹에서 한다 (gh CLI 없음). 리뷰 코멘트가 오면 반영 후 fork 로 push. 링크:
-   `https://github.com/devCollegit/social_media_2026/compare/main...junggee9711:social_media_2026:kimjunggee-data-collection?expand=1`
+   PR 생성은 사용자가 웹에서 한다 (gh CLI 없음). 리뷰 코멘트가 오면 반영 후 원본 origin으로 push. 링크:
+   `https://github.com/devCollegit/social_media_2026/compare/main...kimjunggee-data-collection?expand=1`
 2. **KRX 로그인 환경 검증** (사용자가 `KRX_ID/KRX_PW` 를 셸 또는 `.env`에 설정한 뒤) — `market.cli prices`, `master` 재실행.
    **2026-10-21 완료:** 인증 세션 성공, 두 명령 exit 0. 시세·KOSPI/KOSDAQ 업종 완료 기준 통과(개발기록 10절).
    완료 기준: `value, market_cap, shares` 결측 0, `krx_sector` 채워짐. pykrx 반환 컬럼명이 코드 가정과 다르면 `market/sources.py` 수정 + 테스트 추가.
