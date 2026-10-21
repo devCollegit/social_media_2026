@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -11,6 +13,17 @@ from typing import Any
 import yaml
 
 ROOT = Path(__file__).resolve().parent
+
+
+def load_krx_env() -> None:
+    """프로젝트 .env의 KRX 항목만 읽는다. 기존 셸 환경변수가 우선한다."""
+    from dotenv import dotenv_values
+
+    values = dotenv_values(ROOT / ".env", interpolate=False)
+    for name in ("KRX_ID", "KRX_PW"):
+        value = values.get(name)
+        if value:
+            os.environ.setdefault(name, value)
 
 
 @dataclass
@@ -77,7 +90,7 @@ def parse_stock_list(arg: str | None, file: str | None, settings: Settings) -> l
         codes = []
         for line in lines:
             token = line.split(",")[0].strip()
-            if token.isdigit():
+            if re.fullmatch(r"[0-9A-Z]{6}", token) or token.isdigit():
                 codes.append(token.zfill(6))
         return codes
     return settings.stocks

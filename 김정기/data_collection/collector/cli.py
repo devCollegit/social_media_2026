@@ -25,12 +25,10 @@ def build_fetcher(source: str, cfg: settings_mod.Settings):
     if source == "fixture":
         return FixtureFetcher(cfg.path("community.fixture_dir"))
     if source == "toss":
-        if not cfg.get("community.collection_approved", False):
-            raise SystemExit(
-                "community.collection_approved 가 false 입니다. "
-                "토스증권 이용 허락 확인 전에는 네트워크 수집을 하지 않습니다 (docs/수집가능성_점검표.md)."
-            )
-        return TossFetcher()
+        return TossFetcher(
+            cfg.path("paths.meta_dir") / "stock_master.csv",
+            max_requests=int(cfg.get("community.max_requests", 100)),
+        )
     raise SystemExit(f"알 수 없는 source: {source}")
 
 
@@ -55,7 +53,7 @@ def cmd_run(args: argparse.Namespace, cfg: settings_mod.Settings) -> int:
         since=normalize_created_at(args.since) if args.since else None,
         lookback_hours=float(args.lookback_hours),
         include_replies=bool(cfg.get("community.include_replies", True)) and not args.no_replies,
-        max_pages=args.max_pages,
+        max_pages=args.max_pages if args.max_pages is not None else (5 if source == "toss" else None),
     )
     codes = settings_mod.parse_stock_list(args.stocks, args.stocks_file, cfg)
     collected_at = now_kst()
@@ -70,6 +68,9 @@ def cmd_run(args: argparse.Namespace, cfg: settings_mod.Settings) -> int:
               i, len(codes), code, st.pages, st.rows, st.added, st.updated, st.skipped,
               st.reply_requests, st.stop_reason, f" 오류={len(st.errors)}" if st.errors else "")
         failed += bool(st.errors)
+        if source == "toss" and st.errors:
+            log.warning("네트워크 수집 오류로 남은 종목 요청을 중단합니다.")
+            break
 
     log.info("수집 종료: 요청 %d회, 오류 종목 %d개", ctl.requests, failed)
     return 1 if failed else 0

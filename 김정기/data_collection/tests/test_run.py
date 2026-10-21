@@ -3,6 +3,7 @@ import types
 from pathlib import Path
 
 import pandas as pd
+from copy import deepcopy
 
 from collector.fetchers import FixtureFetcher
 from collector.http import RequestController
@@ -53,6 +54,58 @@ def test_missing_page_logged_as_failure(tmp_path):
     st = collect_stock("000660", e["fetcher"], e["ctl"], e["store"], e["state"], e["failures"], NOW, RunOptions())
     assert st.stop_reason == "error" and st.errors
     assert (tmp_path / "logs" / "failures.csv").exists()
+
+
+def test_page_limit_does_not_advance_checkpoint(tmp_path):
+    e = env(tmp_path)
+    st = run(e, max_pages=1, include_replies=False)
+    assert st.stop_reason == "max_pages=1"
+    assert not e["state"].get("005930")
+    assert not e["store"].load("005930").empty
+
+
+def test_cyclic_list_cursor_reports_error(tmp_path):
+    e = env(tmp_path)
+    page = e["fetcher"].list_page("005930", None)
+    keys = iter([1, 2, 1])
+    def repeated(*args):
+        result = deepcopy(page)
+        result.update(key=next(keys), hasNext=True)
+        return result
+    e["fetcher"].list_page = repeated
+    st = run(e, include_replies=False)
+    assert st.stop_reason == "cursor-stuck" and st.errors
+    assert st.pages == 3
+    assert not e["state"].get("005930")
+
+
+def test_partial_reply_failure_retried_next_run(tmp_path):
+    e = env(tmp_path)
+    original = e["fetcher"].reply_page
+    from collector.http import PermanentError
+    def broken(*args):
+        raise PermanentError("합성 댓글 오류")
+    e["fetcher"].reply_page = broken
+    assert run(e).errors
+    assert not e["state"].get("005930")
+    e["fetcher"].reply_page = original
+    result = run(e)
+    assert not result.errors and result.reply_requests > 0
+
+
+def test_interruption_preserves_finished_pages_without_advancing_state(tmp_path):
+    import pytest
+    e = env(tmp_path)
+    original = e["fetcher"].list_page
+    def interrupted(code, cursor):
+        if cursor is not None:
+            raise KeyboardInterrupt
+        return original(code, cursor)
+    e["fetcher"].list_page = interrupted
+    with pytest.raises(KeyboardInterrupt):
+        run(e, include_replies=False)
+    assert len(e["store"].load("005930")) > 0
+    assert not e["state"].get("005930")
 
 
 def test_output_passes_pipeline_collect_normalize(tmp_path):

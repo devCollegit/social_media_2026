@@ -1,0 +1,91 @@
+<div id="toss-pipeline-explainer">
+  <h3>수집부터 분석까지, 현재 어디까지 왔나</h3>
+  <div class="viz-row">
+    <span class="viz-badge">실행 검증 완료</span>
+    <span class="viz-badge">감성 신뢰성 검증 대기</span>
+  </div>
+  <div class="viz-controls">
+    <button class="btn" type="button" id="toss-play">흐름 재생</button>
+    <button class="btn" type="button" id="toss-stop" disabled>정지</button>
+  </div>
+  <svg class="toss-flow" role="img" aria-labelledby="toss-flow-title toss-flow-description" style="display:block;width:100%">
+    <title id="toss-flow-title">토스 커뮤니티 감성 분석의 처리 흐름과 상태</title>
+    <desc id="toss-flow-description">수집, 정제, 사전 감성분류, 거래일 집계, 시세 병합, 통계 분석은 실행됐다. 감성의 사람 정답 검증은 아직 없으며 다음 단계는 사람 검수와 별도 표본 평가다.</desc>
+    <g class="toss-drawing"></g>
+  </svg>
+  <div class="text-small" aria-live="polite" id="toss-current">2026-10-21 기준 · 69개 테스트 통과</div>
+  <style>
+    #toss-pipeline-explainer .toss-flow text {fill:var(--foreground);font-family:inherit;font-size:var(--font-size-base);font-weight:400}
+    #toss-pipeline-explainer .toss-flow .flow-heading {font-weight:500}
+    #toss-pipeline-explainer .toss-flow .flow-note {fill:var(--muted-foreground)}
+  </style>
+  <script>
+  (() => {
+    const root = document.getElementById('toss-pipeline-explainer');
+    const svg = root.querySelector('.toss-flow');
+    const drawing = root.querySelector('.toss-drawing');
+    const play = root.querySelector('#toss-play');
+    const stop = root.querySelector('#toss-stop');
+    const current = root.querySelector('#toss-current');
+    const ns = 'http://www.w3.org/2000/svg';
+    const rows = [
+      ['01 수집', '완료', '2종목 · 글·댓글 7,759건', '기간: 2026.07.01–10.20'],
+      ['02 정제', '완료', '멘션·중복·길이·기간 처리', '분석용 텍스트 7,632건'],
+      ['03 감성분류', '검증 대기', '사전으로 긍정·중립·부정', 'AI 300건과 일치 38%'],
+      ['04 거래일 집계', '완료', '15:30 종가 기준으로 배정', '일별 감성지수 산출'],
+      ['05 시세 병합', '완료', '감성 + 주가·거래량·시장지수', '2종목 × 74거래일 = 148행'],
+      ['06 통계·예측', '예비 결과', '상관·회귀·순차 예측 실행', '감성 추가 예측 개선 미확인'],
+      ['07 다음 작업', '미완료', '사람 검수 → 분류 개선', '별도 평가 표본 → 재분석']
+    ];
+    let active = -1, timer = null;
+    function element(tag, attrs, text) {
+      const el = document.createElementNS(ns, tag);
+      Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k,v));
+      if (text !== undefined) el.textContent = text;
+      return el;
+    }
+    function draw() {
+      const w = Math.max(280, Math.round(svg.getBoundingClientRect().width));
+      const step = 116, h = rows.length * step - 12;
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      svg.style.height = `${h}px`;
+      drawing.replaceChildren();
+      rows.forEach((r,i) => {
+        const y = i*step+6, x = 30;
+        if (i < rows.length-1) {
+          drawing.append(element('path', {d:`M 14 ${y+18} V ${y+step+18}`,fill:'none',stroke:'var(--border)','stroke-width':1.5}));
+          drawing.append(element('path', {d:`M 10 ${y+step+10} L 14 ${y+step+16} L 18 ${y+step+10}`,fill:'none',stroke:'var(--muted-foreground)','stroke-width':1.5}));
+        }
+        const needsCheck = [2,5,6].includes(i);
+        const color = needsCheck ? 'var(--viz-series-2)' : 'var(--viz-series-1)';
+        drawing.append(element('circle',{cx:14,cy:y+18,r:5,fill:color}));
+        drawing.append(element('rect',{x,y,width:w-x-2,height:100,rx:8,fill:color,'fill-opacity':i===active?.18:.07}));
+        if (i===active) drawing.append(element('rect',{x,y,width:3,height:100,fill:color}));
+        drawing.append(element('text',{x:x+12,y:y+24,class:'flow-heading'},r[0]));
+        drawing.append(element('text',{x:w-14,y:y+24,'text-anchor':'end',class:'flow-note'},r[1]));
+        drawing.append(element('text',{x:x+12,y:y+53},r[2]));
+        drawing.append(element('text',{x:x+12,y:y+79,class:'flow-note'},r[3]));
+      });
+    }
+    function halt() {
+      clearTimeout(timer); timer=null; play.disabled=false; stop.disabled=true;
+    }
+    function advance() {
+      active++;
+      if (active>=rows.length) { active=rows.length-1; halt(); current.textContent='실행 완료 · 사람 정답 검증은 아직 미완료'; return; }
+      draw(); current.textContent=rows[active][0]+' · '+rows[active][1];
+      timer=setTimeout(advance,1400);
+    }
+    play.addEventListener('click',() => {
+      halt();
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        active=2; draw(); current.textContent='핵심 미완료 단계: 감성분류의 사람 정답 검증'; return;
+      }
+      active=-1; play.disabled=true; stop.disabled=false; advance();
+    });
+    stop.addEventListener('click',halt);
+    new ResizeObserver(draw).observe(svg);
+    draw();
+  })();
+  </script>
+</div>

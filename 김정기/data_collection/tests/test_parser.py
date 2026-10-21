@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from collector.parser import COLUMNS, normalize_created_at, parse_page
+from collector.parser import COLUMNS, normalize_created_at, parse_page, redact_mentions, text_from
 
 FIX = Path(__file__).parent / "fixtures" / "toss" / "005930"
 NOW = "2026-10-19T21:00:00+09:00"
@@ -59,3 +59,10 @@ def test_no_personal_fields_leak():
         blob = json.dumps(r, ensure_ascii=False)
         for leaked in ("합성닉네임", "userProfileId", "example.invalid", "자기소개", "1억대", "2604000"):
             assert leaked not in blob
+
+
+def test_body_and_title_mentions_are_removed():
+    assert text_from({"message": {"title": "#[합성별명](12345) 상승",
+                                  "message": "#[다른별명](67890)좋아요"}}) == "상승\n 좋아요"
+    assert redact_mentions("가격 (12345), [뉴스](https://example.invalid)") == "가격 (12345), [뉴스](https://example.invalid)"
+    assert redact_mentions("#[합성별명](12345)") == ""

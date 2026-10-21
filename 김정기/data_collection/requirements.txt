@@ -2,4 +2,7 @@ pykrx>=1.2.9
 finance-datareader>=0.9.90
 pandas>=2.2
 PyYAML>=6.0
+python-dotenv>=1.0,<2
 pytest>=8.0
+scipy>=1.10
+statsmodels>=0.14

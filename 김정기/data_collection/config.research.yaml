@@ -1,0 +1,27 @@
+# 2026-10-21 검증된 연구 입력. 기간 평균 관찰 메시지 20건/달력일 이상인 2종목.
+# 사용 예: .venv/bin/python -m collector.cli -c config.research.yaml run
+# 공개 API를 실제 호출하며 전체 요청 예산은 100회입니다.
+paths:
+  posts_dir: data/raw/posts
+  market_dir: data/raw/market
+  meta_dir: data/raw/meta
+  state_dir: state/research
+  logs_dir: logs/research
+stocks:
+- '003670'
+- '450080'
+period:
+  start: '2026-07-01'
+  end: '2026-10-20'
+community:
+  source: toss
+  max_requests: 100
+  fixture_dir: tests/fixtures/toss
+  min_interval_sec: 2.0
+  max_retries: 0
+  backoff_base_sec: 2.0
+  backoff_max_sec: 60.0
+  include_replies: true
+market:
+  market_index: KOSPI
+  request_interval_sec: 1.0

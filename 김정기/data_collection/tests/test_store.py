@@ -25,7 +25,11 @@ def test_upsert_dedups_and_updates(tmp_path):
 def test_reply_counts(tmp_path):
     store = PostStore(tmp_path)
     store.upsert("005930", [row(1, "2026-10-16T10:00:00.000000+09:00", reply=3)])
-    assert store.reply_counts("005930") == {"1": 3}
+    # 부모에 표시된 3건만으로 댓글 수집 완료로 판단하면 안 된다.
+    assert store.reply_counts("005930") == {"1": 0}
+    store.upsert("005930", [row(2, "2026-10-16T10:01:00.000000+09:00", parent="1")])
+    assert store.reply_counts("005930")["1"] == 1
+    assert store.load("005930").loc[lambda df: df.post_id == "1", "reply_count"].item() == "3"
     assert store.reply_counts("000660") == {}
 
 

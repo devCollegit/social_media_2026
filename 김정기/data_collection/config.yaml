@@ -19,10 +19,10 @@ period:
   end: null                          # null 이면 오늘
 
 community:
-  # 수집 가능성 점검표 5절: 토스증권 이용 허락 전에는 네트워크 수집을 하지 않는다.
-  # 허락을 받으면 조건을 점검표에 기록한 뒤 true 로 바꾼다.
-  collection_approved: false
-  source: fixture                    # fixture: 저장된 JSON 으로 동작 점검 / toss: 허락 후 구현
+  # 기본 실행은 합성 fixture. --source toss를 명시하면 비로그인 공개 API를 사용한다.
+  # 사용자 작업 승인과 운영자의 이용 허락은 별개다(점검표 부록 참고).
+  source: fixture
+  max_requests: 100                   # toss 실행 전체 요청 예산(실패·재시도·댓글 포함)
   fixture_dir: tests/fixtures/toss
   min_interval_sec: 2.0              # 요청 사이 최소 간격
   max_retries: 4

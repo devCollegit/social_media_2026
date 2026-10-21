@@ -66,8 +66,10 @@ def collect_stock(
     st = StockStats(stock_id)
     cutoff = _cutoff(state.get(stock_id), opts)
     known_replies = store.reply_counts(stock_id)
+    original_ids = set(store.load(stock_id)["post_id"])
     rows: list[dict[str, Any]] = []
     cursor: Any = None
+    seen_cursors: set[str] = set()
 
     while True:
         if opts.max_pages is not None and st.pages >= opts.max_pages:
@@ -85,40 +87,51 @@ def collect_stock(
         st.skipped += skipped
 
         reached_cutoff = False
+        page_saved = []
         for row in page_rows:
             if cutoff and row["created_at"] < cutoff:
                 reached_cutoff = True
                 continue
             rows.append(row)
+            page_saved.append(row)
+        store.upsert(stock_id, page_saved)
+        if st.pages % 25 == 0:
+            log.info("%s 목록 진행: %d페이지, %d행", stock_id, st.pages, len(rows))
         if reached_cutoff:
             st.stop_reason = f"cutoff {cutoff}"
             break
         if not has_next or next_key is None:
             st.stop_reason = "end"
             break
-        if next_key == cursor:
+        if repr(next_key) in seen_cursors:
             st.stop_reason = "cursor-stuck"
             failures.add(stock_id, "list", cursor, "다음 커서가 이전과 같음")
+            st.errors.append("목록 커서 반복")
             break
+        seen_cursors.add(repr(next_key))
         cursor = next_key
 
     if opts.include_replies:
         for parent in [r for r in rows if not r["parent_id"]]:
             if int(parent["reply_count"]) <= known_replies.get(parent["post_id"], 0):
                 continue
-            rows.extend(_collect_replies(stock_id, parent["post_id"], fetcher, ctl, failures, collected_at, st))
+            rows.extend(_collect_replies(stock_id, parent["post_id"], fetcher, ctl, failures, collected_at, st, store))
 
     st.rows = len(rows)
-    st.added, st.updated = store.upsert(stock_id, rows)
-    if rows:
+    store.upsert(stock_id, rows)
+    observed_ids = {str(row["post_id"]) for row in rows}
+    st.added = len(observed_ids - original_ids)
+    st.updated = len(observed_ids & original_ids)
+    if rows and not st.errors and (st.stop_reason == "end" or st.stop_reason.startswith("cutoff")):
         top_level = [r["created_at"] for r in rows if not r["parent_id"]]
         state.update(stock_id, max(int(r["post_id"]) for r in rows), max(top_level) if top_level else None)
     return st
 
 
-def _collect_replies(stock_id, post_id, fetcher, ctl, failures, collected_at, st) -> list[dict[str, Any]]:
+def _collect_replies(stock_id, post_id, fetcher, ctl, failures, collected_at, st, store) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     cursor: Any = None
+    seen_cursors: set[str] = set()
     while True:
         try:
             page = unwrap(ctl.call(lambda: fetcher.reply_page(stock_id, post_id, cursor),
@@ -134,6 +147,12 @@ def _collect_replies(stock_id, post_id, fetcher, ctl, failures, collected_at, st
             if not row["parent_id"]:  # 응답에 parentId 가 빠져 있으면 요청한 글로 채운다
                 row["parent_id"] = post_id
             out.append(row)
-        if not has_next or next_key is None or next_key == cursor:
+        store.upsert(stock_id, page_rows)
+        if not has_next or next_key is None:
             return out
+        if repr(next_key) in seen_cursors:
+            st.errors.append("댓글 커서 반복")
+            failures.add(stock_id, f"replies:{post_id}", cursor, "댓글 커서 반복")
+            return out
+        seen_cursors.add(repr(next_key))
         cursor = next_key

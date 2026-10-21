@@ -75,3 +75,8 @@ def test_gives_up_after_max_retries():
     with pytest.raises(TransientError):
         ctl.call(always)
     assert ctl.requests == 3
+
+
+def test_long_retry_after_is_not_shortened():
+    t = FakeTime()
+    assert make(t, backoff_max=60).backoff(0, retry_after=120) == 120

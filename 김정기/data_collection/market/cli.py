@@ -32,7 +32,7 @@ def cmd_prices(args: argparse.Namespace, cfg: settings_mod.Settings) -> int:
     codes = settings_mod.parse_stock_list(args.stocks, args.stocks_file, cfg)
 
     src = MarketSource(interval=float(cfg.get("market.request_interval_sec", 1.0)))
-    log.info("시세 수집 시작: %d종목, %s ~ %s, KRX 로그인=%s", len(codes), start, end, src.use_krx)
+    log.info("시세 수집 시작: %d종목, %s ~ %s, KRX 조회 활성화=%s", len(codes), start, end, src.use_krx)
     if not src.use_krx:
         log.warning("KRX_ID/KRX_PW 가 없어 value, market_cap, shares 컬럼은 비워 둡니다.")
 

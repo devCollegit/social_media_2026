@@ -15,11 +15,14 @@ pykrx 1.2.x 는 KRX 정보데이터시스템 로그인(환경변수 KRX_ID / KRX
 from __future__ import annotations
 
 import logging
+from contextlib import redirect_stdout, redirect_stderr
 import os
 import time
 from datetime import date
 
 import pandas as pd
+
+from settings import load_krx_env
 
 log = logging.getLogger("market")
 
@@ -50,17 +53,31 @@ class Throttle:
 
 class MarketSource:
     def __init__(self, interval: float = 1.0, use_krx: bool | None = None) -> None:
+        load_krx_env()  # pykrx import의 로그인 시도보다 먼저 읽는다.
         self.throttle = Throttle(interval)
         self.use_krx = krx_login_available() if use_krx is None else use_krx
-        from pykrx import stock  # import 시점에 KRX 로그인을 시도하므로 여기서 불러온다
+        # pykrx 인증 함수가 아이디를 print하므로 초기화·호출 출력을 저장 없이 버린다.
+        try:
+            with open(os.devnull, "w") as sink, redirect_stdout(sink), redirect_stderr(sink):
+                from pykrx import stock
+        except Exception as exc:
+            raise RuntimeError(f"pykrx 초기화 실패 ({type(exc).__name__})") from None
 
         self._stock = stock
+
+    def _call_stock(self, method: str, *args, **kwargs):
+        try:
+            with open(os.devnull, "w") as sink, redirect_stdout(sink), redirect_stderr(sink):
+                return getattr(self._stock, method)(*args, **kwargs)
+        except Exception as exc:
+            # 공급자 예외에 인증 요청 내용이 들어 있어도 로그로 전달하지 않는다.
+            raise RuntimeError(f"pykrx {method} 실패 ({type(exc).__name__})") from None
 
     # ------------------------------------------------------------------ 종목 일봉
     def stock_daily(self, code: str, start: str, end: str) -> pd.DataFrame:
         """date, open, high, low, close(수정주가), volume, change, value, market_cap, shares."""
         self.throttle.wait()
-        ohlcv = self._stock.get_market_ohlcv(_ymd(start), _ymd(end), code, adjusted=True)
+        ohlcv = self._call_stock("get_market_ohlcv", _ymd(start), _ymd(end), code, adjusted=True)
         if ohlcv is None or ohlcv.empty:
             raise ValueError(f"{code}: OHLCV 가 비어 있습니다 ({start}~{end}).")
         df = ohlcv.rename(
@@ -84,7 +101,7 @@ class MarketSource:
 
     def _market_cap(self, code: str, start: str, end: str) -> pd.DataFrame | None:
         self.throttle.wait()
-        cap = self._stock.get_market_cap(_ymd(start), _ymd(end), code)
+        cap = self._call_stock("get_market_cap", _ymd(start), _ymd(end), code)
         if cap is None or cap.empty:
             log.warning("%s: 시가총액 조회 결과가 비었습니다. KRX 로그인 상태를 확인하세요.", code)
             return None
@@ -110,7 +127,7 @@ class MarketSource:
     def _index_krx(self, code: str, start: str, end: str) -> pd.DataFrame | None:
         self.throttle.wait()
         try:
-            raw = self._stock.get_index_ohlcv(_ymd(start), _ymd(end), code)
+            raw = self._call_stock("get_index_ohlcv", _ymd(start), _ymd(end), code)
         except Exception as exc:  # pykrx 는 실패 시 KeyError 등을 던진다
             log.warning("pykrx 지수 %s 조회 실패, FDR 로 대체: %s", code, exc)
             return None
@@ -171,7 +188,7 @@ class MarketSource:
         for market in ("KOSPI", "KOSDAQ"):
             self.throttle.wait()
             try:
-                raw = self._stock.get_market_sector_classifications(_ymd(as_of), market)
+                raw = self._call_stock("get_market_sector_classifications", _ymd(as_of), market)
             except Exception as exc:
                 log.warning("pykrx 업종 분류(%s) 조회 실패: %s", market, exc)
                 return None

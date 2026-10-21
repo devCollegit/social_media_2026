@@ -3,35 +3,41 @@
 이 문서는 이 폴더(`김정기/data_collection/`)에서 일하는 코딩 에이전트(Codex 등)용 인계 문서다.
 **작업을 시작하기 전에 끝까지 읽는다.** 사람용 상세 기록은 `docs/` 에 있다.
 
-- 마지막 갱신: 2026-10-21 (Claude Code 세션에서 인계)
+이 문서는 프로젝트의 현재 작업 지침이며 불변 규칙이 아니다. 사용자의 후속 명시적 지시로
+범위와 절차를 변경할 수 있으며, 변경 이유와 근거는 개발기록에 남긴다.
+기술적 접근 가능성, 운영자의 이용 허락, 사용자의 작업 승인은 각각 구분해 기록한다.
+
+- 마지막 갱신: 2026-10-21 (Codex 실수집·연동 완료 반영)
 - 브랜치: `kimjunggee-data-collection` (fork 와의 동기화 여부는 `git status -sb` 로 확인)
-- 사용자(담당자): 김정기 — 소셜미디어분석 수업 6조, 역할 A "커뮤니티 수집"
+- 사용자(담당자): 김정기 — 소셜미디어분석 수업 6조. 사용자 지시로 수집·분석·검증·보고를 역할 분담 없이 통합 진행한다.
 
 ---
 
 ## 0. 한 줄 요약
 
-토스증권 커뮤니티 글·댓글로 종목×거래일 공포탐욕지수를 만드는 팀 과제에서, **데이터 수집**을 맡은 폴더다.
+토스증권 커뮤니티 글·댓글로 종목×거래일 공포탐욕지수를 만드는 팀 과제에서, **수집부터 분석·검증·보고까지** 진행하는 작업 폴더다.
 최종 산출물은 팀원 조현호의 분석 파이프라인(`../../조현호/toss_sentiment/`)이 그대로 읽는 CSV다.
-시세 수집과 수집기의 네트워크 외 부분은 끝났다. **토스증권 네트워크 수집은 이용 허락이 없어 보류 중이다.**
+시세 수집 및 비로그인 API 소규모 검증은 완료했다. 사용자 지시에 따라 단계별 승인을 생략하고
+구현·검증을 자율 진행한다. 운영자의 이용 허락 여부와 사용자의 작업 지시는 구분한다.
 
 ---
 
-## 1. 절대 규칙 (어기면 안 됨)
+## 1. 현재 작업 규칙 (변경 시 근거 기록)
 
-1. **토스증권 서버에 요청하지 않는다.** `wts-*.tossinvest.com`, `www.tossinvest.com` 을 스크립트·curl·브라우저 자동화로 호출하지 않는다.
-   점검용 한 번의 요청도 하지 않는다. 이유는 `docs/수집가능성_점검표.md` 5절. `TossFetcher` 구현, `collection_approved: true` 변경은
-   **사용자가 "토스증권 허락을 받았다"고 명시하고 허락 조건을 점검표에 기록한 뒤에만** 한다. 우회 방법을 제안하거나 쓰지 않는다.
+1. **공개 데이터 범위에서 자율 진행한다.** 2026-10-21 사용자 지시로 기존의 사전 허락·단계별 승인 절차를 폐지했다.
+   `TossFetcher` 구현과 오프라인·연동 검증은 추가 확인 없이 진행한다. 비로그인 공개 GET만 사용하며
+   인증·접근 제한을 우회하지 않는다. 네트워크 실행에는 요청 예산과 간격을 적용한다.
+   사용자 승인과 토스증권의 이용 허락을 혼동하지 않는다. 운영자의 허락을 받았다는 증거는 아직 없다.
 2. **이 폴더(`김정기/`) 밖은 수정하지 않는다.** 특히 `../../조현호/` 는 읽기·import만 한다. 호환 문제는 `docs/개발기록.md` 에 제안 패치로만 남긴다.
    레포 루트 `README.md`, 다른 팀원 폴더도 수정 금지.
 3. **개인정보를 저장하지 않는다.** 닉네임, `userProfileId`, 프로필 URL, 자기소개, 작성자 뱃지(`author.badge`), 체결 수량·금액은
-   파서(`collector/parser.py`)의 화이트리스트를 거치며 버려진다. 컬럼을 추가할 때도 이 원칙을 지키고 `tests/test_parser.py::test_no_personal_fields_leak` 를 통과시킨다.
+   파서(`collector/parser.py`)의 화이트리스트를 거치며 버려진다. 본문 구조화 멘션도 제거한다. 자유 서술의 개인정보까지 완전 제거한 것은 아니므로 공유 전 검수한다. 컬럼을 추가할 때도 이 원칙을 지키고 `tests/test_parser.py::test_no_personal_fields_leak` 를 통과시킨다.
 4. **커밋 금지 대상:** `data/`, `logs/`, `state/`, `.venv/`, `.env`, 쿠키, 토큰, `integration/work|runs|output|data`. (`.gitignore` 에 있음. `git add` 전에 `git status` 로 확인)
-5. **비밀값을 다루지 않는다.** KRX 계정(`KRX_ID`/`KRX_PW`), GitHub 토큰은 사용자가 직접 셸에 넣는다. 파일·커밋·로그에 쓰지 않는다. 대신 입력해 주지 않는다.
+5. **비밀값을 다루지 않는다.** KRX 계정(`KRX_ID`/`KRX_PW`)은 사용자가 직접 셸 또는 이 폴더의 Git 제외 `.env`에 입력한다(사용자 승인으로 허용). 에이전트는 실제 인증값을 읽거나 출력·대신 입력하지 않는다. 인증값을 커밋·로그·문서에 남기지 않는다. GitHub 토큰은 계속 셸에서만 직접 설정한다. `.env.example`에는 빈 값만 둔다. 시세 수집은 `.env`의 KRX 항목만 자동으로 읽고 기존 셸 환경변수를 우선한다.
 6. **서버 부담 금지.** 모든 수집은 순차 실행, 요청 간격 ≥1초(코드가 강제, 기본 2초). 병렬화하지 않는다.
 7. **git:** `main` 에 직접 push 금지. 이 브랜치에서 작업하고 fork 로 push → PR. 커밋 메시지·문서는 **한국어**, 기술 용어는 영어 그대로.
-   push·PR 생성처럼 밖으로 나가는 동작은 사용자 확인 후에 한다.
-8. **단계마다 보고하고 확인받는다.** 사용자는 각 단계 결과(실행 출력 포함)를 보고 승인한 뒤 다음 단계로 가길 원한다.
+   커밋·push·PR은 해당 작업 요청 범위에 포함된 경우 수행한다.
+8. **단계별 승인 없이 자율 진행한다.** 합리적으로 판단 가능한 구현·수정·테스트·문서 갱신을 이어서 수행하고 결과를 정리한다.
 
 ---
 
@@ -42,11 +48,11 @@ cd 김정기/data_collection          # 모든 명령은 여기서 실행 (setti
 python3 -m venv .venv               # 이미 있으면 생략
 .venv/bin/pip install -r requirements.txt
 .venv/bin/pip install -r ../../조현호/toss_sentiment/requirements.txt   # 연동 점검(integration/)용: statsmodels 등
-.venv/bin/python -m pytest -q       # 기대값: 22 passed, 네트워크 불필요
+.venv/bin/python -m pytest -q       # 기대값: 75 passed, 네트워크 불필요
 ```
 
 - Python 3.13, pandas 2.3, pykrx 1.2.9, finance-datareader 0.9.x
-- **네트워크가 필요한 명령:** `pip install`, `market.cli` (KRX/네이버/FDR). Codex 샌드박스에서 네트워크가 막혀 있으면 사용자에게 승인을 요청한다.
+- **네트워크가 필요한 명령:** `pip install`, `market.cli` (KRX/네이버/FDR), toss 모드 `collector.cli`, `collector.activity`, `collector.replies`. 환경 제약이 있으면 원인과 미완료 범위를 기록한다.
   pytest, `collector.cli` (fixture), `integration/run_check.sh` 는 시세 CSV가 이미 있으면 네트워크 없이 돈다.
 
 ### git remote
@@ -65,7 +71,8 @@ python3 -m venv .venv               # 이미 있으면 생략
 ```
 data_collection/
 ├── AGENTS.md              이 문서
-├── config.yaml            경로·종목·기간·요청 간격·재시도·collection_approved
+├── config.yaml            기본 fixture 설정
+├── config.research.yaml   검증된 두 종목의 명시적 네트워크 실행 설정
 ├── settings.py            설정 로딩(상대 경로 = config 파일 폴더 기준), 로깅, 종목 목록 파싱
 ├── market/
 │   ├── sources.py         MarketSource: pykrx(수정주가) + KRX 로그인 시 시총·거래대금·지수·업종, 없으면 FDR 보조
@@ -74,15 +81,19 @@ data_collection/
 │   ├── parser.py          응답 JSON → CSV 행. 화이트리스트, created_at 정규화, badge(BUY/SELL)
 │   ├── store.py           PostStore(종목별 CSV upsert, 전부 str 로 읽고 씀), CollectorState(JSON), FailureLog(CSV)
 │   ├── http.py            RequestController: 간격 ≥1초, 지수 백오프+지터, Retry-After, Transient/PermanentError
-│   ├── fetchers.py        Fetcher Protocol, FixtureFetcher(파일), TossFetcher(미구현 — NotImplementedError)
+│   ├── fetchers.py        Fetcher Protocol, FixtureFetcher(파일), TossFetcher(비로그인 GET, 요청 예산)
 │   ├── run.py             collect_stock: 최신순 페이지 넘김, 증분 cutoff, 댓글 수 증가한 글만 댓글 재요청
-│   └── cli.py             cron 진입점. 실패 종목 있으면 exit 1
+│   ├── activity.py        후보별 활동량 하한 측정·재개
+│   ├── replies.py         저장된 부모의 댓글만 보충·재개
+│   └── cli.py             cron 진입점. 네트워크 오류 시 중단, exit 1
 ├── integration/           조현호 파이프라인 연동 점검 (합성 커뮤니티 + 실제 시세)
-│   ├── run_check.sh       생성 → 수집 → run_pipeline.py run --until merge
+│   ├── run_check.sh       합성 생성 → 수집 → run_pipeline.py run --until merge
+│   ├── run_real_check.py  저장된 실데이터로 격리된 연동 실행
 │   ├── make_synthetic_pages.py
 │   ├── collector.yaml
 │   └── config/pipeline.yaml   조현호 설정 복사본 (기간·source·input_dir 만 변경)
-├── tests/                 pytest 22건 + fixtures/toss/005930/*.json (합성, 실제 사용자 데이터 아님)
+├── review_tool/           로컬 사람 검수 UI·서버·사용 안내
+├── tests/                 pytest 75건 + fixtures/toss/005930/*.json (합성, 실제 사용자 데이터 아님)
 └── docs/
     ├── 수집가능성_점검표.md   약관·robots·API 조사, 응답 구조 관찰, 보류 결론
     ├── 개발기록.md           결정·발견한 문제·검증 결과 (날짜별로 이어 씀)
@@ -120,37 +131,58 @@ data_collection/
 
 | 단계 | 상태 |
 | --- | --- |
-| 1 수집 가능성 점검 | 완료. 약관에 금지·허용 모두 명시 없음, 공식 API 없음, 온라인 서비스 이용약관 제10조 리스크 → **보류**. 팀이 토스증권(support@tossinvest.com)에 문의 예정/진행 중 |
-| 2 수집기 | 네트워크 외 전부 완료. `TossFetcher` 미구현(의도적) |
-| 3 시세 | 완료. 단 **KRX 로그인이 없어** `value, market_cap, shares, krx_sector` 가 비어 있음 |
-| 3 종목 선정 | 후보 300종목만. 일평균 글+댓글 ≥20건 측정은 커뮤니티 수집 후 |
-| 4 연동 검증 | 합성 커뮤니티 + 실제 시세로 `run --until merge` 통과 (개발기록 7절). 실데이터는 수집 후 |
-| PR | **아직 안 열림.** fork 브랜치에 push 된 상태 (최신 커밋 반영 여부는 `git status -sb`) |
+| 1 수집 가능성 점검 | 비로그인 공개 API 실동작 확인. 사용자 지시로 제한된 실제 수집 진행. 운영자의 이용 허락 여부는 미확인(점검표 부록 D) |
+| 2 수집기 | `TossFetcher` 구현 및 합성 응답·연동 검증 완료. 전체 75 passed. 기본 source는 fixture |
+| 3 시세 | KRX 로그인 검증 완료(2026-10-21). 3종목 × 74거래일(07-01~10-20)의 `value, market_cap, shares` 결측 0. KOSPI/KOSDAQ 2,762종목 `krx_sector` 결측 0. KONEX 105종목은 업종 조회 대상 밖 |
+| 3 종목 선정 | 300종목 하루 예비 조사: 통과 134, 추가 관찰 166. 기간 확장 검증 3종목 중 003670·450080은 112달력일 평균 ≥20건 확인. 267250은 관찰량 미달로 비교용 보존 |
+| 4 연동 검증 | 실데이터 최종 2종목 7,759행 → merge 148행, 각 74/74일 커버리지 100%. 비교용 포함 3종목은 9,232행 → 222행. 개발기록 16절 |
+| market 오프라인 테스트 | 컬럼·등락률·시장명·후보 필터·인증정보 출력 차단 검증 완료. 전체 테스트 75 passed |
+| 비로그인 API 검증 | 새 fetcher의 3종목 목록·댓글 확인, 실제 댓글 3페이지 31건 중복 없이 확인. 후보 300종목 및 검증용 3종목 과거 수집으로 확장 |
+| 후속 검증 | 멘션 제거 후 정제 7,632행, 전체8단계 재실행. HAC·순차 예측·AI 300건 검토 완료. 최신 경로는 개발기록19절 |
+| Git | 사용자 요청 범위는 이 브랜치의 코드·문서 커밋 및 fork push. PR 생성 제외. 실제 동기화는 `git status -sb`로 확인 |
+| 사람 검수 도구 | `python -m review_tool.server` → `http://127.0.0.1:8768`. 저장·재개·보류·완료 CSV 내보내기 구현. 데이터는 Git 제외 |
 
 ---
 
-## 6. 다음 작업 (우선순위 순, 각 항목 끝나면 사용자에게 보고)
+## 6. 작업 상태 및 다음 작업 (단계별 승인 불필요)
 
-1. **PR 생성 안내·리뷰 대응** — 본문 초안은 `docs/작업이관.md` 6절 (2026-10-21 연동 점검까지 반영됨).
+2026-10-21 추가 지시: 역할을 나누거나 다른 담당자에게 넘기는 것을 선행 조건으로 삼지 않는다.
+기존 외부 소스는 읽기/import로 재사용하고 이 폴더에서 전체 분석을 수행한다.
+`state/full_analysis_20261021`에 8단계 실행 완료. 검수 표본 300건은
+`data/labels/review_20261021/review.csv`에 생성했다. 강건성 점검은 `state/robustness_20261021`에 완료했다(개발기록 18절). 후속 시계열 진단과 AI 60건 예비 검수까지 완료했다(개발기록 19절). 본문 멘션 제거 후 최신 결과는 `state/temporal_20261021/검증요약.md`에 있다. 300건 AI 검토는 완료했다(개발기록 20절). 사전과 일치 38.0%이며 사람 정답 정확도가 아니다. 사람 정답 검증은 미완료다. 최신 검수본은 `data/labels/human_review_context_20261021`이다.
+사람 검수가 없으므로 정확도·독립 평가자 간 일치도는 미측정이다. 두 종목·약 3.7개월의
+예비 분석이며 원고의 3~5종목·약 6개월 설계와 차이가 있다.
+
+
+0. **현재 다음 작업: 사람 검수** — `.venv/bin/python -m review_tool.server`로 실행한다. `review_tool/README.md` 참고. 사람 라벨은 직접 입력하며 완료 후 별도 분석 설정에 연결한다.
+
+1. **PR 생성 안내·리뷰 대응(현재 요청 범위 밖)** — 본문 초안은 `docs/작업이관.md` 6절 (2026-10-21 연동 점검까지 반영됨).
    PR 생성은 사용자가 웹에서 한다 (gh CLI 없음). 리뷰 코멘트가 오면 반영 후 fork 로 push. 링크:
    `https://github.com/devCollegit/social_media_2026/compare/main...junggee9711:social_media_2026:kimjunggee-data-collection?expand=1`
-2. **KRX 로그인 환경 검증** (사용자가 `KRX_ID/KRX_PW` 를 셸에 설정한 뒤) — `market.cli prices`, `master` 재실행.
+2. **KRX 로그인 환경 검증** (사용자가 `KRX_ID/KRX_PW` 를 셸 또는 `.env`에 설정한 뒤) — `market.cli prices`, `master` 재실행.
+   **2026-10-21 완료:** 인증 세션 성공, 두 명령 exit 0. 시세·KOSPI/KOSDAQ 업종 완료 기준 통과(개발기록 10절).
    완료 기준: `value, market_cap, shares` 결측 0, `krx_sector` 채워짐. pykrx 반환 컬럼명이 코드 가정과 다르면 `market/sources.py` 수정 + 테스트 추가.
-   (`get_market_cap` → `시가총액, 거래량, 거래대금, 상장주식수` / `get_index_ohlcv` → `종가, 거래량, 거래대금` / `get_market_sector_classifications` → `종목코드, 업종명` 가정. 로그인 상태로 실제 검증된 적 없음)
-3. **market 모듈 테스트 추가** — 현재 테스트는 collector 위주. pykrx/FDR 을 monkeypatch 한 오프라인 테스트로
+   (`get_market_cap`, `get_index_ohlcv`, `get_market_sector_classifications` 반환 데이터는 현재 코드로 실제 로그인 후 처리 성공)
+3. **market 모듈 테스트 추가 — 2026-10-21 완료(개발기록 11절).** pykrx/FDR 을 monkeypatch 한 오프라인 테스트로
    `stock_daily` 컬럼·`change` 소수 변환·`KOSDAQ GLOBAL→KOSDAQ`·`candidates` 필터(보통주, 스팩·리츠 제외)를 검증.
-4. **(허락 후에만)** 점검표에 허락 조건 기록 → `TossFetcher` 구현:
-   목록 `GET https://wts-cert-api.tossinvest.com/api/v4/comments?subjectType=STOCK&subjectId=<ISIN>&commentSortType=RECENT` (+ 커서 `key`),
-   댓글 요청 형식은 **아직 관찰하지 않았다** — 허락 범위 안에서 확인. 429/5xx → `TransientError(retry_after=...)`, 4xx → `PermanentError`.
-   종목코드→ISIN 은 `stock_master.csv`. 그다음 후보 300종목 소량 예비 수집 → 일평균 ≥20건 종목 확정 → 실데이터로 `integration` 경로 재실행 → `06_감성_커버리지.csv` 보고.
+4. **TossFetcher 구현 완료(개발기록 14절).** 목록 v4의 `lastCommentId`, 댓글 v2의
+   `replySortType=NEWEST`와 `(lastCommentId, lastLikeCount)` 커서를 지원한다.
+   `--source toss`로 명시 실행하며 기본 source는 fixture. 종목별 기본 5페이지, 전체 기본 100요청
+   (재시도·댓글 포함). 요청 예산/페이지 제한으로 중단하면 증분 체크포인트를 진행시키지 않는다.
+   실제 목록·댓글 다음 페이지, 후보 300종목 예비 조사, 3종목 기간 확장 수집·연동까지 완료했다.
+   게시글 5,651 + 댓글 3,581 = 9,232건. 112달력일 평균 기준으로 확인된 2종목만
+   `data/raw/posts/003670.csv`, `450080.csv`에 최종 내보냈다(총 7,759행).
+   `config.research.yaml`은 검증된 2종목용 명시 실행 설정이며, 기본 `config.yaml`은 fixture 설정이다.
+   원자료·메타데이터·SHA 및 비교용 보존 경로는 `state/final_collection_manifest_20261021.json`과
+   `docs/작업이관.md` 4절 참고. 실행 중인 수집 작업은 없다. 후속 운영은 기존 상태를 이용한 증분 실행이다.
 
-하지 말 것: 조현호 코드 수정, 토스 요청, 대량·병렬 수집, 원문 데이터 커밋, 사용자 확인 없는 push.
+하지 말 것: 조현호 코드 수정, 인증·접근 제한 우회, 무제한·병렬 수집, 원문 데이터 커밋.
 
 ---
 
 ## 7. 알려진 함정
 
-- **pykrx 1.2.x 는 import 시 KRX 로그인을 시도**하고 실패하면 `KRX 로그인 실패...` 를 출력한다. 정상이다. 로그인 없이 되는 건 수정주가 OHLCV뿐.
+- **pykrx 1.2.x 는 import 시 KRX 로그인을 시도**하고 인증 아이디를 print한다. `MarketSource`는 초기화·호출 stdout/stderr를 폐기하고 예외를 종류만 전달하여 인증값 노출을 막는다. 실제 로그인 성공은 변수 존재 여부와 별개다.
 - **FDR `StockListing('KRX')`** 은 시장을 `KOSDAQ GLOBAL` 로 표기하는 50종목이 있다 → `KOSDAQ` 으로 합침 (이미 처리).
 - **조현호 `clean` 단계의 반복 홍보 판정**(같은 종목·같은 날 같은 문장 4회 이상 → 홍보)이 큰 게시판의 짧은 상용 문장을 지울 수 있다.
   합성 데이터에서 50% 제외됨. 실데이터에서 `02_정제_요약.csv` 제외 비율을 꼭 확인. 제안만 개발기록 7.1에 있음 (조현호 코드 수정 금지).

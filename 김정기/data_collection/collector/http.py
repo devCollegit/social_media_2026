@@ -59,7 +59,7 @@ class RequestController:
 
     def backoff(self, attempt: int, retry_after: float | None = None) -> float:
         if retry_after is not None:
-            return min(self.backoff_max, max(retry_after, self.min_interval))
+            return max(retry_after, self.min_interval)
         delay = self.backoff_base * (2 ** attempt)
         return min(self.backoff_max, delay + self._jitter() * self.backoff_base)
 

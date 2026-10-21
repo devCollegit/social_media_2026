@@ -58,11 +58,15 @@ class PostStore:
         return added, updated
 
     def reply_counts(self, stock_id: str) -> dict[str, int]:
+        """재수집 판단용 댓글 수. 서버 표시 수와 실제 저장 수 중 작은 값."""
         df = self.load(stock_id)
         if df.empty:
             return {}
         counts = pd.to_numeric(df["reply_count"], errors="coerce").fillna(0).astype(int)
-        return dict(zip(df["post_id"], counts))
+        saved_replies = df[df["parent_id"] != ""]["parent_id"].value_counts()
+        # 부분 실패 후 부모의 서버 reply_count만 저장되어 재시도가 생략되는 것을 막는다.
+        return {post_id: min(count, int(saved_replies.get(post_id, 0)))
+                for post_id, count in zip(df["post_id"], counts)}
 
 
 class CollectorState:

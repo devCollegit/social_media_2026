@@ -2,7 +2,8 @@
 
 응답 구조는 2026-10-19 WTS 화면 관찰 결과(점검표 3절)를 따른다.
 필요한 필드만 화이트리스트로 꺼내므로 닉네임·프로필 ID·체결 수량·금액 같은
-작성자 정보는 이 함수를 지나면 남지 않는다.
+구조화된 작성자 정보와 본문 멘션 표식을 제거한다. 자유 서술에 포함된 개인정보를
+모두 탐지하는 것은 아니므로 외부 공유 전 별도 검수가 필요하다.
 """
 
 from __future__ import annotations
@@ -23,6 +24,12 @@ SOURCE = "tossinvest"
 BADGE_VALUES = {"BUY": "BUY", "SELL": "SELL"}
 
 _FRACTION = re.compile(r"(\.\d+)")
+MENTION = re.compile(r"#\[[^\]\r\n]*\]\(\d+\)")
+
+
+def redact_mentions(text: str) -> str:
+    """본문의 토스 멘션 닉네임·프로필 식별자를 제거한다."""
+    return MENTION.sub(" ", text).strip()
 
 
 def normalize_created_at(value: str) -> str:
@@ -46,7 +53,7 @@ def stock_id_from(item: dict[str, Any], fallback: str | None = None) -> str:
     code = ((item.get("board") or {}).get("stockCode") or "").strip()
     if code.startswith("A"):
         code = code[1:]
-    if code.isdigit():
+    if re.fullmatch(r"[0-9A-Z]{6}", code) or code.isdigit():
         return code.zfill(6)
     if fallback:
         return str(fallback).zfill(6)
@@ -58,8 +65,8 @@ def text_from(item: dict[str, Any]) -> str:
     title = (msg.get("title") or "").strip()
     body = (msg.get("message") or "").strip()
     if title and body:
-        return f"{title}\n{body}"
-    return title or body
+        return redact_mentions(f"{title}\n{body}")
+    return redact_mentions(title or body)
 
 
 def badge_from(item: dict[str, Any]) -> str:
