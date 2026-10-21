@@ -20,7 +20,7 @@ Windows 사용자는 WSL의 Linux 환경에 코드와 입력 파일을 준비한
 새로 코드를 받는 경우:
 
 ```bash
-git clone --branch kimjunggee-data-collection https://github.com/junggee9711/social_media_2026.git
+git clone --branch kimjunggee-data-collection https://github.com/devCollegit/social_media_2026.git
 cd social_media_2026/김정기/data_collection
 ```
 
