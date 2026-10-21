@@ -35,6 +35,7 @@
 3. **개인정보를 저장하지 않는다.** 닉네임, `userProfileId`, 프로필 URL, 자기소개, 작성자 뱃지(`author.badge`), 체결 수량·금액은
    파서(`collector/parser.py`)의 화이트리스트를 거치며 버려진다. 본문 구조화 멘션도 제거한다. 자유 서술의 개인정보까지 완전 제거한 것은 아니므로 공유 전 검수한다. 컬럼을 추가할 때도 이 원칙을 지키고 `tests/test_parser.py::test_no_personal_fields_leak` 를 통과시킨다.
 4. **커밋 금지 대상:** `data/`, `logs/`, `state/`, `.venv/`, `.env`, 쿠키, 토큰, `integration/work|runs|output|data`. (`.gitignore` 에 있음. `git add` 전에 `git status` 로 확인)
+   **2026-10-21 사용자 명시 요청 예외:** `shared/analysis_7632/`의 공개 검사된 7,632행 공유본(CSV·manifest·README)은 커밋·원본 push 허용. 원래 ID를 임의 ID로 교체하고 정확한 시각·자유서술 AI 근거는 제외, 위험 표현 본문은 비운다. 원본 `data/`·`state/`와 private_mapping은 계속 커밋 금지. 완전한 익명화로 주장하지 않는다.
 5. **비밀값을 다루지 않는다.** KRX 계정(`KRX_ID`/`KRX_PW`)은 사용자가 직접 셸 또는 이 폴더의 Git 제외 `.env`에 입력한다(사용자 승인으로 허용). 에이전트는 실제 인증값을 읽거나 출력·대신 입력하지 않는다. 인증값을 커밋·로그·문서에 남기지 않는다. GitHub 토큰은 계속 셸에서만 직접 설정한다. `.env.example`에는 빈 값만 둔다. 시세 수집은 `.env`의 KRX 항목만 자동으로 읽고 기존 셸 환경변수를 우선한다.
 6. **서버 부담 금지.** 모든 수집은 순차 실행, 요청 간격 ≥1초(코드가 강제, 기본 2초). 병렬화하지 않는다.
 7. **git:** `main` 에 직접 push 금지. 이 브랜치에서 작업하고 원본 저장소 origin으로 push한다. fork는 개발·push 대상으로 사용하지 않는다. PR은 요청 시에만 생성한다. 커밋 메시지·문서는 **한국어**, 기술 용어는 영어 그대로.
@@ -50,7 +51,7 @@ cd 김정기/data_collection          # 모든 명령은 여기서 실행 (setti
 python3 -m venv .venv               # 이미 있으면 생략
 .venv/bin/pip install -r requirements.txt
 .venv/bin/pip install -r ../../조현호/toss_sentiment/requirements.txt   # 연동 점검(integration/)용: statsmodels 등
-.venv/bin/python -m pytest -q       # 기대값: 98 passed, 네트워크 불필요
+.venv/bin/python -m pytest -q       # 기대값: 100 passed, 네트워크 불필요
 ```
 
 - Python 3.13, pandas 2.3, pykrx 1.2.9, finance-datareader 0.9.x
@@ -98,7 +99,7 @@ data_collection/
 │   ├── collector.yaml
 │   └── config/pipeline.yaml   조현호 설정 복사본 (기간·source·input_dir 만 변경)
 ├── review_tool/           로컬 사람 검수 UI·서버·사용 안내
-├── tests/                 pytest 98건 + fixtures/toss/005930/*.json (합성, 실제 사용자 데이터 아님)
+├── tests/                 pytest 100건 + fixtures/toss/005930/*.json (합성, 실제 사용자 데이터 아님)
 └── docs/
     ├── 수집가능성_점검표.md   약관·robots·API 조사, 응답 구조 관찰, 보류 결론
     ├── 개발기록.md           결정·발견한 문제·검증 결과 (날짜별로 이어 씀)
@@ -137,15 +138,16 @@ data_collection/
 | 단계 | 상태 |
 | --- | --- |
 | 1 수집 가능성 점검 | 비로그인 공개 API 실동작 확인. 사용자 지시로 제한된 실제 수집 진행. 운영자의 이용 허락 여부는 미확인(점검표 부록 D) |
-| 2 수집기 | `TossFetcher` 구현 및 합성 응답·연동 검증 완료. 전체 98 passed. 기본 source는 fixture |
+| 2 수집기 | `TossFetcher` 구현 및 합성 응답·연동 검증 완료. 전체 100 passed. 기본 source는 fixture |
 | 3 시세 | KRX 로그인 검증 완료(2026-10-21). 3종목 × 74거래일(07-01~10-20)의 `value, market_cap, shares` 결측 0. KOSPI/KOSDAQ 2,762종목 `krx_sector` 결측 0. KONEX 105종목은 업종 조회 대상 밖 |
 | 3 종목 선정 | 300종목 하루 예비 조사: 통과 134, 추가 관찰 166. 기간 확장 검증 3종목 중 003670·450080은 112달력일 평균 ≥20건 확인. 267250은 관찰량 미달로 비교용 보존 |
 | 4 연동 검증 | 실데이터 최종 2종목 7,759행 → merge 148행, 각 74/74일 커버리지 100%. 비교용 포함 3종목은 9,232행 → 222행. 개발기록 16절 |
-| market 오프라인 테스트 | 컬럼·등락률·시장명·후보 필터·인증정보 출력 차단 검증 완료. 전체 테스트 98 passed |
+| market 오프라인 테스트 | 컬럼·등락률·시장명·후보 필터·인증정보 출력 차단 검증 완료. 전체 테스트 100 passed |
 | 비로그인 API 검증 | 새 fetcher의 3종목 목록·댓글 확인, 실제 댓글 3페이지 31건 중복 없이 확인. 후보 300종목 및 검증용 3종목 과거 수집으로 확장 |
 | 후속 검증 | 멘션 제거 후 정제 7,632행, 전체8단계 재실행. HAC·순차 예측·AI 300건 검토 완료. 최신 경로는 개발기록19절 |
 | 저비용 LLM | gpt-6-luna medium 3에이전트로 7,632건 전체 판정. source/prompt/결과 SHA·ID·인용 검증. 유효 판정 4,849건, 147/148일 유효 지수. `state/llm_full_20261021`, 일별 결과는 daily_corrected만 사용 |
 | 반응 관측 시제품 | analysis/market_observatory.py 구현. 148개 종목·거래일 관측표·6개 브리핑 예시. 추가 LLM 호출 없음. 결과 state/market_observatory_v1_20261021 |
+| 팀 공유 자료 | 사용자 요청으로 `shared/analysis_7632/records.csv` 7,632행 제공. 본문6,849건·공개보류783건, AI판정 전부 유지. 원래ID·정확시각·AI인용·작성자정보 제외 |
 | Git | 사용자 요청 범위는 이 브랜치의 코드·문서 커밋 및 원본 origin push. PR 생성 제외. 실제 동기화는 `git status -sb`로 확인 |
 | 검수 역할 | 김정기는 수집·도구 제공. 사람 검수는 팀이 지정할 담당자 업무. 명세는 `docs/검수명세.md` |
 | 사람 검수 도구 | `python -m review_tool.server` → `http://127.0.0.1:8768`. 저장·재개·보류·완료 CSV 내보내기 구현. 데이터는 Git 제외 |

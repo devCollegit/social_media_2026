@@ -1,0 +1,39 @@
+{
+  "rows": 7632,
+  "stats": {
+    "text_available": 6849,
+    "parent_withheld": 931,
+    "text_withheld_privacy_screen": 783,
+    "flag_financial_detail": 660,
+    "flag_person_reference": 122,
+    "flag_address": 31,
+    "flag_private_life": 2
+  },
+  "model": "gpt-6-luna",
+  "format_version": "public_screened_v1",
+  "predictions_unchanged": true,
+  "original_post_ids_replaced": true,
+  "exact_times_removed": true,
+  "freeform_ai_reason_and_evidence_omitted": true,
+  "privacy_method": "rule_screen_whole_text_withholding; not a guarantee of complete anonymization",
+  "ai_labels_refer_to": "original private text and parent context before sharing screen",
+  "sentiment_counts": {
+    "부정": 2477,
+    "판단유보": 2351,
+    "긍정": 1552,
+    "중립": 820,
+    "혼합": 432
+  },
+  "relevance_counts": {
+    "related": 5666,
+    "unrelated": 1072,
+    "unclear": 894
+  },
+  "records_sha256": "9107eddbf20c809efff85876fdce0ee00d8bbfc363230b85b988480289006129",
+  "input_sha256": {
+    "source": "e4a64f153e7b4aacb17b4ca0a4a2041f6d6683f3a39a447efcf6041b7082c52f",
+    "clean": "28bcaa7db1c057db86ed83cdc80cc1db6586903ccc329e54a286d9f952c32ba9",
+    "predictions": "5199523daf9620f6f0674951ba8010cf321194ad3ee8a0b824f0dbb1d0d1837b",
+    "market": "a75a27a0eb0e4d9a80cca823d1c11458a7e12b2ab3c05913e9ec0eabbb88e68c"
+  }
+}
