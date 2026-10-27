@@ -1,0 +1,286 @@
+{
+  "windows_KST": {
+    "pre": "00:00 <= time < 09:00",
+    "during": "09:00 <= time <= 15:30",
+    "after": "15:30 < time < 24:00"
+  },
+  "market_reference": "KRX regular-session clock; pre/after may contain NXT trading",
+  "scope": "2026-09-01..2026-10-20, frozen snapshot only",
+  "method": "Trading dates only; nontrading dates separately counted. Daily score requires every observed post in group classified and >=5 eligible related positive/neutral/negative posts. Pearson only when n>=10; exploratory, no significance or causal claim. No intraday quotes used.",
+  "stocks": {
+    "005380": {
+      "sessions": {
+        "pre": {
+          "posts": 2878,
+          "classified": 1351,
+          "unclassified": 1527,
+          "sentiments": {
+            "긍정": 195,
+            "부정": 839,
+            "판단유보": 166,
+            "혼합": 59,
+            "중립": 92
+          },
+          "eligible": 1126,
+          "pooled_score_classified_only": -0.5719360568383659,
+          "valid_days": 8
+        },
+        "during": {
+          "posts": 16890,
+          "classified": 6926,
+          "unclassified": 9964,
+          "sentiments": {
+            "부정": 4004,
+            "판단유보": 998,
+            "긍정": 1104,
+            "중립": 549,
+            "혼합": 271
+          },
+          "eligible": 5657,
+          "pooled_score_classified_only": -0.5126392080608096,
+          "valid_days": 8
+        },
+        "after": {
+          "posts": 5463,
+          "classified": 2178,
+          "unclassified": 3285,
+          "sentiments": {
+            "부정": 1286,
+            "긍정": 280,
+            "판단유보": 265,
+            "중립": 246,
+            "혼합": 101
+          },
+          "eligible": 1812,
+          "pooled_score_classified_only": -0.5551876379690949,
+          "valid_days": 9
+        }
+      },
+      "nontrading_day_posts": 982
+    },
+    "010120": {
+      "sessions": {
+        "pre": {
+          "posts": 811,
+          "classified": 811,
+          "unclassified": 0,
+          "sentiments": {
+            "부정": 344,
+            "판단유보": 121,
+            "긍정": 217,
+            "중립": 88,
+            "혼합": 41
+          },
+          "eligible": 649,
+          "pooled_score_classified_only": -0.19568567026194145,
+          "valid_days": 32
+        },
+        "during": {
+          "posts": 3899,
+          "classified": 3899,
+          "unclassified": 0,
+          "sentiments": {
+            "판단유보": 525,
+            "긍정": 796,
+            "중립": 430,
+            "부정": 1990,
+            "혼합": 158
+          },
+          "eligible": 3216,
+          "pooled_score_classified_only": -0.3712686567164179,
+          "valid_days": 32
+        },
+        "after": {
+          "posts": 1095,
+          "classified": 1095,
+          "unclassified": 0,
+          "sentiments": {
+            "판단유보": 146,
+            "중립": 147,
+            "부정": 504,
+            "긍정": 233,
+            "혼합": 65
+          },
+          "eligible": 884,
+          "pooled_score_classified_only": -0.3065610859728507,
+          "valid_days": 32
+        }
+      },
+      "nontrading_day_posts": 73
+    }
+  },
+  "correlations": [
+    {
+      "stock_id": "005380",
+      "session": "pre",
+      "target": "same_day_open_close_return_pct",
+      "n_days": 8,
+      "pearson_r": null
+    },
+    {
+      "stock_id": "005380",
+      "session": "pre",
+      "target": "overnight_return_pct",
+      "n_days": 8,
+      "pearson_r": null
+    },
+    {
+      "stock_id": "005380",
+      "session": "pre",
+      "target": "next_day_open_close_return_pct",
+      "n_days": 7,
+      "pearson_r": null
+    },
+    {
+      "stock_id": "005380",
+      "session": "during",
+      "target": "same_day_open_close_return_pct",
+      "n_days": 8,
+      "pearson_r": null
+    },
+    {
+      "stock_id": "005380",
+      "session": "during",
+      "target": "overnight_return_pct",
+      "n_days": 8,
+      "pearson_r": null
+    },
+    {
+      "stock_id": "005380",
+      "session": "during",
+      "target": "next_day_open_close_return_pct",
+      "n_days": 7,
+      "pearson_r": null
+    },
+    {
+      "stock_id": "005380",
+      "session": "after",
+      "target": "same_day_open_close_return_pct",
+      "n_days": 9,
+      "pearson_r": null
+    },
+    {
+      "stock_id": "005380",
+      "session": "after",
+      "target": "overnight_return_pct",
+      "n_days": 9,
+      "pearson_r": null
+    },
+    {
+      "stock_id": "005380",
+      "session": "after",
+      "target": "next_day_open_close_return_pct",
+      "n_days": 8,
+      "pearson_r": null
+    },
+    {
+      "stock_id": "010120",
+      "session": "pre",
+      "target": "same_day_open_close_return_pct",
+      "n_days": 32,
+      "pearson_r": -0.1144999599105844
+    },
+    {
+      "stock_id": "010120",
+      "session": "pre",
+      "target": "overnight_return_pct",
+      "n_days": 32,
+      "pearson_r": 0.480542830129831
+    },
+    {
+      "stock_id": "010120",
+      "session": "pre",
+      "target": "next_day_open_close_return_pct",
+      "n_days": 31,
+      "pearson_r": 0.017171679106815167
+    },
+    {
+      "stock_id": "010120",
+      "session": "during",
+      "target": "same_day_open_close_return_pct",
+      "n_days": 32,
+      "pearson_r": 0.5273428675045749
+    },
+    {
+      "stock_id": "010120",
+      "session": "during",
+      "target": "overnight_return_pct",
+      "n_days": 32,
+      "pearson_r": -0.004297960852010385
+    },
+    {
+      "stock_id": "010120",
+      "session": "during",
+      "target": "next_day_open_close_return_pct",
+      "n_days": 31,
+      "pearson_r": -0.1775260709459655
+    },
+    {
+      "stock_id": "010120",
+      "session": "after",
+      "target": "same_day_open_close_return_pct",
+      "n_days": 32,
+      "pearson_r": 0.6270467442311989
+    },
+    {
+      "stock_id": "010120",
+      "session": "after",
+      "target": "overnight_return_pct",
+      "n_days": 32,
+      "pearson_r": 0.153410761968762
+    },
+    {
+      "stock_id": "010120",
+      "session": "after",
+      "target": "next_day_open_close_return_pct",
+      "n_days": 31,
+      "pearson_r": -0.25012027946508175
+    }
+  ],
+  "sensitivity_checks": [
+    {
+      "session": "pre",
+      "target": "same_day_open_close_return_pct",
+      "n": 32,
+      "pearson": -0.1144999599105844,
+      "spearman": -0.06617175355442594,
+      "leave_one_day_out_min": -0.1943043742987364,
+      "leave_one_day_out_max": 0.02322095555641561,
+      "first_half_pearson": -0.025478836860499704,
+      "second_half_pearson": -0.32984796786700427
+    },
+    {
+      "session": "during",
+      "target": "same_day_open_close_return_pct",
+      "n": 32,
+      "pearson": 0.5273428675045749,
+      "spearman": 0.5575513196480938,
+      "leave_one_day_out_min": 0.4893459564328897,
+      "leave_one_day_out_max": 0.5856252635057043,
+      "first_half_pearson": 0.30348658953712176,
+      "second_half_pearson": 0.6777954055303735
+    },
+    {
+      "session": "after",
+      "target": "same_day_open_close_return_pct",
+      "n": 32,
+      "pearson": 0.6270467442311989,
+      "spearman": 0.7243401759530791,
+      "leave_one_day_out_min": 0.5938860379233957,
+      "leave_one_day_out_max": 0.6677120320088809,
+      "first_half_pearson": 0.6808564003236267,
+      "second_half_pearson": 0.6348647706197332
+    },
+    {
+      "session": "after",
+      "target": "next_day_open_close_return_pct",
+      "n": 31,
+      "pearson": -0.25012027946508175,
+      "spearman": -0.11774193548387098,
+      "leave_one_day_out_min": -0.3192106952600385,
+      "leave_one_day_out_max": -0.053030669897772706,
+      "first_half_pearson": -0.387748053906692,
+      "second_half_pearson": -0.34273465520386187
+    }
+  ]
+}

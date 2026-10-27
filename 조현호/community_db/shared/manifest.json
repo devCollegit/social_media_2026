@@ -1,0 +1,69 @@
+{
+  "records": 39723,
+  "classified": 24498,
+  "unclassified": 15225,
+  "stocks": [
+    {
+      "source_id": "kim_7632",
+      "stock_id": "003670",
+      "name": "포스코퓨처엠",
+      "records": 4380,
+      "first_date": "2026-07-01",
+      "last_date": "2026-10-20",
+      "classified": 4380,
+      "unclassified": 0,
+      "text_available": 3950
+    },
+    {
+      "source_id": "hyundai_ls_20261027",
+      "stock_id": "005380",
+      "name": "현대차",
+      "records": 26213,
+      "first_date": "2026-09-04",
+      "last_date": "2026-10-20",
+      "classified": 10988,
+      "unclassified": 15225,
+      "text_available": 23554
+    },
+    {
+      "source_id": "hyundai_ls_20261027",
+      "stock_id": "010120",
+      "name": "LS ELECTRIC",
+      "records": 5878,
+      "first_date": "2026-09-01",
+      "last_date": "2026-10-20",
+      "classified": 5878,
+      "unclassified": 0,
+      "text_available": 5407
+    },
+    {
+      "source_id": "kim_7632",
+      "stock_id": "450080",
+      "name": "에코프로머티",
+      "records": 3252,
+      "first_date": "2026-07-01",
+      "last_date": "2026-10-20",
+      "classified": 3252,
+      "unclassified": 0,
+      "text_available": 2899
+    }
+  ],
+  "market_rows": 64,
+  "session_rows": 192,
+  "db_sha256": "f6f03680210e32366cf0dd61d9fb1f45331e8a13e1f8ca9a960df1ced990f778",
+  "schema_version": 1,
+  "original_ids_and_exact_times": false,
+  "new_collection_calls": 0,
+  "new_ai_calls": 0,
+  "source_inputs": {
+    "kim_7632": "9107eddbf20c809efff85876fdce0ee00d8bbfc363230b85b988480289006129",
+    "hyundai_ls_20261027": "80212fc900881d31739b780d05cec33892901975a55ea92382945e127106d6f3"
+  },
+  "limits": [
+    "Different periods, text types and prompts; retain source IDs.",
+    "Only Hyundai/LS market and session aggregates are included.",
+    "Text withheld for privacy is not blank sentiment or neutral.",
+    "Missing timestamps are not reconstructed.",
+    "No human accuracy guarantee."
+  ]
+}
