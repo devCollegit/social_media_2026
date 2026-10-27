@@ -1,0 +1,134 @@
+{
+  "dataset": "frozen LS ELECTRIC; 5878 classified posts, 5805 trading-day posts, 73 nontrading-day posts",
+  "grouping": "same-day open-to-close return >0.5% up, <-0.5% down, otherwise flat; descriptive outcome grouping, not a forecast",
+  "score_average": "equal-weight mean of daily session scores; not pooled text-weighted index",
+  "groups": {
+    "up": {
+      "n_days": 13,
+      "total_posts": 2037,
+      "mean_posts_per_day": 156.69230769230768,
+      "median_posts_per_day": 172,
+      "min_posts": 67,
+      "max_posts": 289,
+      "session_daily_mean_score": {
+        "pre": -0.32309315816921147,
+        "during": -0.23370484424137225,
+        "after": 0.003269595707887469
+      }
+    },
+    "down": {
+      "n_days": 16,
+      "total_posts": 3290,
+      "mean_posts_per_day": 205.625,
+      "median_posts_per_day": 183.0,
+      "min_posts": 76,
+      "max_posts": 575,
+      "session_daily_mean_score": {
+        "pre": -0.1635110952516476,
+        "during": -0.4234373614998467,
+        "after": -0.49039633313582953
+      }
+    },
+    "flat": {
+      "n_days": 3,
+      "total_posts": 478,
+      "mean_posts_per_day": 159.33333333333334,
+      "median_posts_per_day": 152,
+      "min_posts": 134,
+      "max_posts": 192,
+      "session_daily_mean_score": {
+        "pre": -0.28080808080808084,
+        "during": -0.21194191617007732,
+        "after": -0.30333333333333334
+      }
+    }
+  },
+  "cases": [
+    {
+      "date": "2026-10-19",
+      "open_close_return_pct": 11.06666666666667,
+      "group": "up",
+      "posts": 181,
+      "pre_posts": 43,
+      "pre_score": -0.5714285714285714,
+      "during_posts": 93,
+      "during_score": -0.04,
+      "after_posts": 45,
+      "after_score": 0.11428571428571428
+    },
+    {
+      "date": "2026-10-07",
+      "open_close_return_pct": -9.691629955947134,
+      "group": "down",
+      "posts": 575,
+      "pre_posts": 103,
+      "pre_score": 0.32142857142857145,
+      "during_posts": 413,
+      "during_score": -0.6392961876832844,
+      "after_posts": 59,
+      "after_score": -0.6666666666666666
+    },
+    {
+      "date": "2026-10-02",
+      "open_close_return_pct": 0.23980815347721673,
+      "group": "flat",
+      "posts": 134,
+      "pre_posts": 37,
+      "pre_score": -0.15151515151515152,
+      "during_posts": 83,
+      "during_score": 0.015151515151515152,
+      "after_posts": 14,
+      "after_score": -0.4166666666666667
+    }
+  ],
+  "qualitative_method": "3 price-selected extreme/near-flat days, each 3 sessions, 4 chronological quantile positions per session among public-screen-passing texts of 12..220 characters; 36 total; purposive nonrepresentative sample. Codes are direct AI qualitative reading by the assistant, not new gpt-6-luna batch labels, no human/intercoder validation. Original sentiment labels unchanged.",
+  "qualitative_codes": {
+    "하락우려": 2,
+    "시장참조": 1,
+    "저점매수기대": 2,
+    "수급해석": 1,
+    "호재와가격의괴리": 1,
+    "원인탐색": 2,
+    "기대회복": 1,
+    "주식의인화": 1,
+    "매수권유": 1,
+    "다른투자자이탈평가": 1,
+    "놓칠불안": 1,
+    "저점매수축하": 1,
+    "상승기대": 5,
+    "수급추종": 1,
+    "추세지속요구": 1,
+    "추세불확실": 1,
+    "보유언급": 1,
+    "밈": 1,
+    "위험경고": 1,
+    "이탈언급": 1,
+    "실망불만": 2,
+    "동종비교": 3,
+    "기대반전": 4,
+    "재진입욕구": 1,
+    "갈등": 1,
+    "장기보유언급": 1,
+    "상대박탈": 2,
+    "하락불안": 1,
+    "수급참조": 2,
+    "상승요구": 1,
+    "기회비용": 1,
+    "불만": 2,
+    "수급비교": 1,
+    "불신": 2,
+    "추가매수주저": 1,
+    "타인매도권유": 1,
+    "하락예상": 1,
+    "이탈의향": 1
+  },
+  "limitations": [
+    "outcome-conditioned group selection cannot establish prediction",
+    "32 days, no news/market controls, no causal or significance claim",
+    "posts are not unique authors, no audience size or author-level trajectory",
+    "privacy withholding and length filters affect qualitative sample",
+    "no actual replies; no interaction-network or diffusion analysis",
+    "NXT trading may occur in pre/after KRX clock windows",
+    "Naver daily prices, adjustment convention unverified"
+  ]
+}

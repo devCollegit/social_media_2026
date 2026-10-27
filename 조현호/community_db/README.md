@@ -73,3 +73,11 @@ python3 조현호/community_db/make_ai_batch.py --limit 50
 ## 재생성
 
 `build_db.py`는 로컬 Git의 `origin/kimjunggee-data-collection`에 있는 공개 7,632건과 기존 고정 공유본을 읽습니다. 네트워크나 LLM을 호출하지 않으며 입력 파일 해시·중복 ID·행 수·DB 무결성을 검사합니다. 세션 집계 CSV가 `output/session_experiment/session_daily.csv`에 있어야 하며 공유 ZIP에 원본 입력은 중복 배포하지 않았습니다. 팀원은 재생성할 필요 없이 완성 ZIP만 받아도 됩니다.
+
+## 분석 결과와 공유 이미지
+
+- [장전·장중·장후 실험](../../output/session_experiment/실험결과.md)
+- [게시글 사례·담론 추가 분석](../../output/discourse_study/추가분석_결과보고서.md)
+- [간단한 4장 공유 이미지](../../output/team_share/simple4/README.md)
+
+상관·사례 분석은 탐색 결과이며 예측력이나 인과관계 검증 결과가 아닙니다.
