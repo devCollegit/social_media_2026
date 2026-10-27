@@ -1,0 +1,21 @@
+{
+  "collection_enabled": false,
+  "llm_enabled": false,
+  "reason": "Current work packages existing screened data only. No scheduled collection or paid API calls.",
+  "user_confirmed_limits": {
+    "max_new_records_per_stock_per_day": 100,
+    "max_ai_records_per_day_total": 50,
+    "automatic_schedule_enabled": false
+  },
+  "configured_limits_for_manual_preparation": {
+    "max_new_records_per_stock_per_day": 100,
+    "max_records_per_ai_batch": 50,
+    "max_characters_per_ai_batch": 12000,
+    "max_characters_per_record": 2000,
+    "skip_already_classified": true,
+    "skip_privacy_withheld_text": true,
+    "network_min_interval_seconds": 2,
+    "no_automatic_retry_or_model_call": true,
+    "max_ai_records_per_day_total": 50
+  }
+}
