@@ -1,0 +1,80 @@
+{
+  "frozen_at": "2026-10-27T20:17:44.273973+09:00",
+  "status": "frozen_partial_collection_partial_classification",
+  "requested_scope": [
+    "2026-09-01",
+    "2026-10-20"
+  ],
+  "freeze_reason": "user requested stop and share data already collected",
+  "rows": 32091,
+  "stocks": {
+    "005380": {
+      "rows": 26213,
+      "posts": 26213,
+      "comments": 0,
+      "classified": 10988,
+      "unclassified": 15225,
+      "from": "2026-09-04",
+      "to": "2026-10-20",
+      "sentiments": {
+        "부정": 6401,
+        "긍정": 1674,
+        "판단유보": 1508,
+        "중립": 953,
+        "혼합": 452
+      }
+    },
+    "010120": {
+      "rows": 5878,
+      "posts": 5878,
+      "comments": 0,
+      "classified": 5878,
+      "unclassified": 0,
+      "from": "2026-09-01",
+      "to": "2026-10-20",
+      "sentiments": {
+        "부정": 2865,
+        "판단유보": 800,
+        "긍정": 1269,
+        "중립": 674,
+        "혼합": 270
+      }
+    }
+  },
+  "screening_stats": {
+    "unclassified": 15225,
+    "text_withheld": 3130,
+    "flag_financial_detail": 2940,
+    "flag_person_reference": 135,
+    "classified": 16866,
+    "flag_address": 123,
+    "flag_private_life": 5,
+    "flag_link_or_mention": 1
+  },
+  "model": "gpt-6-luna",
+  "reasoning_effort": "medium",
+  "workers": 3,
+  "is_MoA": false,
+  "prompt_origin": "reconstructed public teammate rules",
+  "human_accuracy_evaluated": false,
+  "collection_complete": false,
+  "classification_complete": false,
+  "original_ids_shared": false,
+  "exact_times_shared": false,
+  "ai_reasons_and_evidence_shared": false,
+  "privacy_screening": "whole text withheld on rule match; not complete anonymization",
+  "market_source": "Naver public daily; KRX adjustment convention not verified",
+  "limitations": [
+    "stock coverage periods differ",
+    "reply collection phase not performed",
+    "unclassified is not neutral",
+    "labels refer to original text before privacy withholding"
+  ],
+  "sha256": {
+    "records.csv": "80212fc900881d31739b780d05cec33892901975a55ea92382945e127106d6f3",
+    "daily_summary.csv": "866cc822c6cf20702af856375bd3f74664f396d5d720bf1f74553d6028076af9",
+    "viewer.html": "10005ba45731878a3de384076f57aba83a14a1712c36b868f359280a1be91a67",
+    "README.md": "d3fa0ac609c2219eb0aa38f53da485fb63c89733d45687671f32c0b678d62aaf"
+  },
+  "label_version_note": "Frozen latest validated outputs. Some worker_2 batches 494..521 were reclassified during resume; previous versions were not retained. No claim that labels are unchanged from earlier progress snapshots."
+}
