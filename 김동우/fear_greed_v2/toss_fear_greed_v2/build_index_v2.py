@@ -9,9 +9,12 @@
 - p60_*    : 60거래일 백분위 (B3). 기존 20일 백분위(p20_*)도 함께
 - resid    : 그날 종목·시장 수익률로 설명되는 부분을 뺀 잔차 심리 (B4)
 - buy_ratio, holding_share : 매수 인증 ÷ (매수 + 매도 인증), 보유 표시 비율 (B5)
+- S_holder, S_nonholder : 보유자 글과 비보유자 글의 감성 (B5. 보유자 탐욕·공포 열 h_greed·h_fear가 있을 때)
 - fg_index : 0~100 공포탐욕 지수 = S_shr의 60일 백분위. direction_v2·strength_v2·regime_v2 (B6)
 
-입력 (--base): trading_days.csv, sectors.json, ohlcv.json, krx_index.json / (--out) apply_out_v2/ 또는 --apply 로 기존 apply_out2/
+입력 (--base): trading_days.csv, sectors.json, ohlcv.json, krx_index.json / (--out) apply_out_v2/ 또는 --apply 로 기존 집계 폴더
+  - 류창민 apply_out3/ (최종 모델 v2, 11/25): 판정 수를 확률 합 자리에 쓰고, 인증(n_buy·n_sell)·보유(n_holder)·보유자 탐욕·공포는 그대로 씀
+  - 류창민 apply_out2/ (이전 모델): 판정 수만 있음. 행동 열은 0
 출력 (--out): index_v2/daily_stock.csv, daily_sector.csv, daily_market.csv, reports/index_report.json
 사용: python build_index_v2.py --base <toss_fear_greed 폴더> --out v2_out
 """
@@ -54,13 +57,15 @@ for f in sorted(glob.glob(os.path.join(ap, "*.csv"))):
     x["part"] = [b for _, b in m]
     rows.append(x.dropna(subset=["date"]))
 x = pd.concat(rows, ignore_index=True)
-if "p_greed" not in x:                       # 기존 apply_out2 형식이면 판정 수를 확률 합 자리에 쓴다
+if "n_holder" in x and "n_holding" not in x:   # 류창민 apply_out3 형식: 보유자 글 수 열 이름이 다름
+    x["n_holding"] = x.n_holder
+if "p_greed" not in x:                       # 기존 apply_out2·apply_out3 형식이면 판정 수를 확률 합 자리에 쓴다
     x["p_greed"], x["p_fear"], x["p_irrelevant"] = x.n_greed, x.n_fear, 0.0
-    for c in ("n_reply", "n_buy", "n_sell", "n_holding"):
+for c in ("n_reply", "n_buy", "n_sell", "n_holding", "n_likes", "h_greed", "h_fear"):
+    if c not in x:                           # apply_out2에는 행동 열이 없음 → 0 (apply_out3의 인증·보유 열은 그대로 씀)
         x[c] = 0
-if "n_likes" not in x:
-    x["n_likes"] = 0
-VAL = ["n_posts", "n_reply", "n_buy", "n_sell", "n_holding", "n_likes", "p_greed", "p_fear", "p_irrelevant", "n_greed", "n_fear"]
+HAS_BEHAVIOR = bool(x[["n_buy", "n_sell", "n_holding"]].to_numpy().sum() > 0)
+VAL = ["n_posts", "n_reply", "n_buy", "n_sell", "n_holding", "n_likes", "p_greed", "p_fear", "p_irrelevant", "n_greed", "n_fear", "h_greed", "h_fear"]
 day = x.groupby(["code", "date"])[VAL].sum()
 part = x.groupby(["code", "date", "part"])[["n_posts", "p_greed", "p_fear", "p_irrelevant"]].sum().unstack("part").fillna(0)
 part.columns = [f"{p}_{c}" for c, p in part.columns]
@@ -120,6 +125,10 @@ for code, g in d.groupby("code"):
     nb = g.n_buy + g.n_sell
     g["buy_ratio"] = (g.n_buy / nb).where(nb >= 5)
     g["holding_share"] = (g.n_holding / N).where(N > 0)
+    # 보유자와 비보유자의 감성 (B5). 보유자 글의 탐욕·공포가 집계돼 있을 때만
+    g["S_holder"] = ((g.h_greed - g.h_fear) / (g.n_holding + K)).where(g.n_holding > 0)
+    nn = (N - g.n_holding).clip(lower=0)
+    g["S_nonholder"] = (((g.p_greed - g.h_greed) - (g.p_fear - g.h_fear)) / (nn + K)).where(nn > 0)
     for c in ("S_orig",):
         g[f"p20_{c}"] = pct_rank(g[c].fillna(0), W20)
     for c in ("S_shr", "S_night_shr", "S_day_shr", "concentration"):
@@ -197,7 +206,8 @@ cc = d[["S_orig", "S_prob", "S_pacc", "S_shr", "resid"]].corr().round(3) if "S_p
 rep = {"rows": len(d), "stocks": int(d.code.nunique()), "dates": [d.date.min(), d.date.max()],
        "residual_model": {"beta_ret": float(beta[0]), "beta_mret": float(beta[1]), "r2_within": float(r2)},
        "pc1_loadings": pc1, "corr": cc.to_dict(), "regime_v2": d.regime_v2.value_counts(dropna=False).to_dict(),
-       "pacc_used": bool(Q), "share_days_no_posts": float((d.n_posts == 0).mean())}
+       "pacc_used": bool(Q), "share_days_no_posts": float((d.n_posts == 0).mean()), "behavior_columns": HAS_BEHAVIOR,
+       "apply_dir": os.path.basename(os.path.normpath(ap))}
 write_json(os.path.join(A.out, "reports", "index_report.json"), rep)
 print(f"종목·일 {len(d):,}행 ({rep['dates'][0]}~{rep['dates'][1]}), 섹터·일 {len(sec):,}, 시장·일 {len(mkt):,}")
 print("잔차 모형: 수익률 1%p → S_shr", round(beta[0], 4), "/ 설명력(종목 내)", round(r2, 3))

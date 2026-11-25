@@ -442,7 +442,7 @@ select{padding:5px 8px;border:1px solid #c5ccd8;border-radius:8px;background:#ff
 
 <section id="s10">
   <h2><span class="n">10</span>구현 현황</h2>
-  <p class="lead">GPU 없이 할 수 있는 보완은 코드로 구현해 두었습니다. 위치는 레포 <code>dongwooki/dongwooki</code>의 <code>소셜미디어분석_6조/toss_fear_greed_v2/</code>입니다. 기존 코드·파일은 고치지 않고, 기존 폴더를 입력으로 읽어 옆에 결과를 씁니다.</p>
+  <p class="lead">GPU 없이 할 수 있는 보완은 코드로 구현해 두었습니다. 위치는 레포 <code>devCollegit/social_media_2026</code>의 <code>kimdongwoo/fear-greed-v2</code> 브랜치, <code>김동우/fear_greed_v2/toss_fear_greed_v2/</code>입니다. 기존 코드·파일은 고치지 않고, 기존 폴더를 입력으로 읽어 옆에 결과를 씁니다.</p>
   <div class="tbl"><table>
     <thead><tr><th>파일</th><th>구현한 항목</th><th>상태</th></tr></thead>
     <tbody>
@@ -453,9 +453,14 @@ select{padding:5px 8px;border:1px solid #c5ccd8;border-radius:8px;background:#ff
       <tr><td><code>predict_v2.py</code></td><td>C5, 수급 예보의 예상 범위</td><td>구현·합성 검증</td></tr>
       <tr><td><code>make_active_batch.py</code>, <code>label_agreement.py</code>, <code>batch_task_active.md</code></td><td>A6, A7 (Claude Code 판정용 묶음과 일치도)</td><td>구현·합성 검증. 실제 판정은 데이터를 받은 뒤</td></tr>
       <tr><td><code>ui/dashboard.html</code>, <code>build_ui_data.py</code></td><td>7장 UI를 실제 결과 파일을 읽는 대시보드로</td><td>구현. 지금은 합성 데이터 표시</td></tr>
-      <tr><td>—</td><td>A8(여러 축 라벨), A9(한국어 사전학습 모델)</td><td>미구현. A8은 판정 데이터, A9는 GPU 필요</td></tr>
+      <tr><td><code>fetch_us_overnight.py</code></td><td>C1 미국 증시 통제 자료(<code>us_overnight.csv</code>). 공개 일별 종가(FRED)로 한국 거래일마다 전날 밤 미국 장 수익률</td><td>구현·실자료 확인 (11/26)</td></tr>
+      <tr><td><code>alerts_v2.py</code></td><td>7장 알림 규칙 3개를 전체 기간에서 검증하고 "이런 날 과거에는" 기록을 만듦</td><td>구현·합성 검증 (11/26)</td></tr>
+      <tr><td><code>intraday_v2.py</code></td><td>30분 장중 지수 (평활 반감기를 데이터로 고름, 글 적은 시간은 회색)</td><td>구현·합성 검증 (11/26)</td></tr>
+      <tr><td><code>label_guide_multi.md</code>, <code>batch_task_multi.md</code>, <code>make_multi_batch.py</code>, <code>multi_label_report.py</code></td><td>A8 여러 축 판정(감정·행동 의도·대상) 기준, 묶음, 정리</td><td>구현·구조 시험 (11/26). 실제 판정은 데이터를 받은 뒤</td></tr>
+      <tr><td>—</td><td>A9(한국어 사전학습 모델)</td><td>미구현. GPU 필요</td></tr>
     </tbody>
   </table></div>
+  <div class="note"><b>11/26 업데이트:</b> 류창민 님 커밋 c8f6e65(11/25)에서 A4·A5(부모 글·단어·인증·보유 입력)와 B5(인증·보유 행동 분석)가 반영됐고, A1~A3·B1은 비교 실험 뒤 기존 방식이 유지됐습니다. v2는 류창민 님의 <code>apply_out3/</code> 집계를 그대로 읽어 원문 없이 지수·분석·알림·장중 지수·대시보드까지 돌릴 수 있게 했습니다(<code>run_all.sh --from-apply</code>). 미국 증시 통제 자료, 알림 규칙 검증, 30분 장중 지수, A8 도구를 새로 더했습니다.</div>
   <div class="note"><b>11/25 업데이트:</b> 류창민 님이 커밋 1a91b88·28ba19f·64f15aa에서 C1(날짜 고정효과·지수 갭·08시 전·출범 전 구간), C2~C8, B2·B3·B4·B6·B7, 6장 문구 수정을 직접 반영했습니다. 남은 보완은 3장 모델(A1~A9), B1 보정 집계, B5 행동 축, C1의 시간외·미국 증시 통제, 수급 예상 범위, 7장 UI입니다. v2 코드도 새 글 입력 형식(김정기 수집기 CSV)에 맞췄습니다.</div>
   <h3>합성 데이터로 확인한 것</h3>
   <p>실제 데이터와 같은 형식의 합성 데이터(15종목, 327거래일, 글 27만 건)를 만들어 전체를 돌렸습니다. 약 2분 30초가 걸렸습니다. 합성 문장은 실제 글보다 쉬우므로 아래 수치는 코드가 의도대로 움직인다는 확인일 뿐입니다.</p>

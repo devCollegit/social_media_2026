@@ -39,7 +39,8 @@ CODES = [c for v in SECT.values() for c in v]
 OUT = os.path.join(A.out, "apply_out_v2")
 os.makedirs(OUT, exist_ok=True)
 COLS = ["slot_kst", "n_posts", "n_reply", "n_buy", "n_sell", "n_holding",
-        "p_greed", "p_fear", "p_neutral", "p_irrelevant", "p_unsure", "n_greed", "n_fear", "n_greed_argmax", "n_fear_argmax", "n_likes"]
+        "p_greed", "p_fear", "p_neutral", "p_irrelevant", "p_unsure", "n_greed", "n_fear", "n_greed_argmax", "n_fear_argmax", "n_likes",
+        "h_greed", "h_fear"]   # 보유자 글의 탐욕·공포 확률 합 (류창민 apply_out3의 h_greed·h_fear와 같은 자리, 여기서는 확률 합)
 
 
 def proba(rows):
@@ -107,12 +108,16 @@ for code in CODES:
                 g[12] += CL[am[j]] == "greed"
                 g[13] += CL[am[j]] == "fear"
                 g[14] += r[6]
+                if r[5]:
+                    g[15] += pg[j]
+                    g[16] += pf[j]
         with open(out + ".tmp", "w", newline="") as f:
             w = csv.writer(f)
             w.writerow(COLS)
             for h in sorted(agg):
                 v = agg[h]
-                w.writerow([h] + [int(x) for x in v[:5]] + [round(float(x), 3) for x in v[5:10]] + [int(x) for x in v[10:]])
+                w.writerow([h] + [int(x) for x in v[:5]] + [round(float(x), 3) for x in v[5:10]] + [int(x) for x in v[10:15]]
+                           + [round(float(x), 3) for x in v[15:]])
         os.replace(out + ".tmp", out)
         total += len(rows)
     print(f"{code} 누적 {total:,}건 {(time.time() - t0) / 60:.1f}분", flush=True)
