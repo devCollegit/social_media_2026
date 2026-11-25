@@ -7,16 +7,20 @@
 
 ## 입력 데이터
 
-`data/posts/<종목코드>.jsonl` — 한 줄에 글 하나
+`data/raw/posts/<stock_id>.csv` — 김정기 수집기(`김정기/data_collection/collector`)와 같은 형식, 한 줄에 글 하나
 
-| 필드 | 내용 |
+| 컬럼 | 내용 |
 |---|---|
+| `stock_id` | 종목코드 6자리 |
 | `post_id` | 글 id |
-| `parent_post_id` | 대댓글이면 부모 원글 id, 원글이면 `null` |
-| `published_at` | 작성 시각 (ISO 8601, 시간대 포함) |
-| `holding` | 작성자 보유 여부 표시 (없으면 `null`) |
-| `execution_side` | 매수·매도 인증 `BUY`/`SELL` (없으면 `null`) |
-| `title`, `body` | 제목·본문 |
+| `parent_id` | 대댓글이면 부모 원글 id, 원글이면 빈 값 |
+| `text` | 제목·본문 (멘션은 지움) |
+| `created_at` | 작성 시각 (KST, ISO 8601) |
+| `collected_at` | 수집 시각 |
+| `source` | `tossinvest` |
+| `badge` | 매수·매도 인증 `BUY`/`SELL` (없으면 빈 값) |
+| `like_count`, `reply_count` | 공감 수, 대댓글 수 |
+| `is_holder` | 작성자가 보유자면 1 |
 
 종목 목록은 `sectors.json`에 있다.
 

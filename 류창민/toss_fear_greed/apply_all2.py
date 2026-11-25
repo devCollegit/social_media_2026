@@ -1,7 +1,7 @@
 """45종목 2년치 전체 글에 최종 모델 + 키워드 적용 -> 종목·30분(KST)별 집계. 원문은 저장하지 않음.
 30분 단위: 거래일 경계(20:00)·장전 구간(08:30 등)을 나중에 자유롭게 자르기 위함.
 키워드: lexicon_all29k.json 중 정밀도 0.8 이상. 글 하나에 탐욕 단어가 하나라도 있으면 n_kw_greed +1 (공포도 같음, 둘 다일 수 있음).
-입력: data/posts/<종목코드>.jsonl (형식은 make_sample.py 설명과 같음), model.joblib (train_final.py 결과). post_id 중복 제거.
+입력: data/raw/posts/<stock_id>.csv (김정기 수집기 형식, make_sample.py 설명 참고), model.joblib (train_final.py 결과). post_id 중복 제거.
 출력: apply_out2/<종목코드>_<YYYY-MM>.csv  (slot_kst, n_posts, n_greed, n_fear, n_kw_greed, n_kw_fear) — 한 달 = 전월 27일 ~ 당월 27일 전, 이미 있으면 건너뜀(이어하기).
 사용: python apply_all2.py [종목코드 [YYYY-MM]]"""
 import csv, json, os, sys, time
@@ -12,7 +12,7 @@ from featurize import D, clean, THRESHOLD, MENTION
 from extract_keywords import tokens_batch
 
 KST = timezone(timedelta(hours=9))
-POSTS = os.path.join(D, "data", "posts")
+POSTS = os.path.join(D, "data", "raw", "posts")
 LEX = [k for k in json.load(open(f"{D}/lexicon_all29k.json"))["keywords"] if k["precision"] >= 0.8]
 KW_G = {k["word"] for k in LEX if k["side"] == "greed"}; KW_F = {k["word"] for k in LEX if k["side"] == "fear"}
 M = joblib.load(f"{D}/model.joblib"); V, LR = M["vectorizer"], M["model"]
@@ -38,17 +38,14 @@ only_month = sys.argv[2] if len(sys.argv) > 2 else None
 total = 0; t0 = time.time()
 for code in STOCKS:
     if only_code and code != only_code: continue
-    path_in = os.path.join(POSTS, f"{code}.jsonl")
+    path_in = os.path.join(POSTS, f"{code}.csv")
     if not os.path.exists(path_in): print(f"{code} 입력 없음, 건너뜀"); continue
     seen, by_month = set(), defaultdict(list)
-    for line in open(path_in, encoding="utf-8"):
-        if not line.strip(): continue
-        r = json.loads(line)
-        if r["post_id"] in seen or not (r.get("body") or "").strip(): continue
+    for r in csv.DictReader(open(path_in, encoding="utf-8")):
+        if r["post_id"] in seen or not (r.get("text") or "").strip(): continue
         seen.add(r["post_id"])
-        t = datetime.fromisoformat(r["published_at"]).astimezone(KST)
-        title = (r.get("title") or "").strip()
-        by_month[month_key(t)].append((slot(t), ((title + " ") if title else "") + r["body"]))
+        t = datetime.fromisoformat(r["created_at"]).astimezone(KST)
+        by_month[month_key(t)].append((slot(t), r["text"]))
     for ym in sorted(by_month):
         if only_month and ym != only_month: continue
         path = f"{D}/apply_out2/{code}_{ym}.csv"
