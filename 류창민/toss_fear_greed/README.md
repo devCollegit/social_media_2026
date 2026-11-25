@@ -35,13 +35,14 @@
 | | `lr_prevyear.py` | 최근 1년으로 학습한 모델이 이전 1년에도 통하는지 비교 | |
 | | `train_final.py` | 최종 학습: LLM 판정 29,000건 (최근 1년 23,000 + 이전 1년 6,000) | `model.joblib` |
 | 5. 전체 적용 | `apply_all2.py` | 전체 글을 판정해 종목·30분 단위로 집계. 원문은 저장하지 않는다 | `apply_out2/` |
-| 6. 지수 | `build_index.py` | 거래일 배정(20:00 경계), 감성 점수 S = (탐욕 − 공포) ÷ (전체 + 10), 20거래일 백분위, 방향·강도 축, 국면 | `index_out/` |
+| 6. 지수 | `build_index.py` | 거래일 배정(20:00 경계), 감성 점수 S = (탐욕 − 공포 + 10 × 그 종목 평소 수준) ÷ (전체 + 10), 60거래일 백분위, 방향·강도 축(주성분 가중치), 국면 | `index_out/` |
 | 7. KRX | `fetch_krx.py` | 종목 일봉과 거래일 달력 (로그인 불필요) | `ohlcv.json` 등 |
-| | `fetch_krx_login.py` | 코스피·코스닥 지수, 투자자별 순매수 (환경 변수 `KRX_ID`·`KRX_PW` 필요) | `krx_index.json`, `krx_investor.json` |
+| | `fetch_krx_login.py` | 코스피·코스닥 지수, 투자자별 순매수, 공매도(2025-03-31 재개 이후) (환경 변수 `KRX_ID`·`KRX_PW` 필요) | `krx_index.json`, `krx_investor.json`, `krx_short.json` |
 | 8. 분석 | `analysis_krx.py` | 밤사이 심리 → 다음 날 시가·장중(선행), 주가 → 심리(후행) | `krx_results.json` |
 | | `analysis_presentation.py` | 글 수와 개인 수급, 투자자별 수급과 심리, 급락일 전후, 주간·야간 비교 | `pres_results.json` |
 | | `analysis_rotation.py` | 분기·월별 섹터 순매수 이동, 대표 12종목 | `rotation_results.json` |
 | | `rotation_keywords.py` | 섹터·분기별 토론글 대표 단어 (단어와 빈도만 저장) | `rotation_keywords.json` |
+| | `analysis_extra.py` | 지수 구간별 이후 성과, 심리 → 다음 날 거래량·변동폭·공매도, 탐욕·공포 반응 경로, 잔차 심리, 다음 날 예측 비교 | `extra_results.json` |
 | 9. 발표자료 | `presentation/build_presentation.py` | 분석 결과로 HTML 발표자료를 만든다 | `.html` |
 | | `presentation/export_pdf.py` | HTML을 PDF로 바꾼다 | `.pdf` |
 

@@ -3,6 +3,7 @@
 import json, sys, datetime as dt
 from pykrx import stock
 end = dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).strftime("%Y%m%d"); start = "20241001"
+SHORT_START = "20250331"   # 공매도 재개일
 codes = [c for v in json.load(open("sectors.json")).values() for c in v]
 idx = {}
 for k, t in (("KOSPI", "1001"), ("KOSDAQ", "2001")):
@@ -15,7 +16,7 @@ for c in codes:
     d = stock.get_market_trading_value_by_date(start, end, c)            # 투자자별 순매수 대금(원)
     inv[c] = {i.strftime("%Y-%m-%d"): {k: int(v) for k, v in r.items()} for i, r in d.iterrows()}
     try:
-        s = stock.get_shorting_volume_by_date(start, end, c)
+        s = stock.get_shorting_volume_by_date(SHORT_START, end, c)   # 공매도 전면 금지(2023-11-06 ~ 2025-03-30) 구간을 넣으면 응답 오류
         sht[c] = {i.strftime("%Y-%m-%d"): {k: float(v) for k, v in r.items()} for i, r in s.iterrows()}
     except Exception as e:
         sht[c] = {}; print("공매도 실패", c, type(e).__name__, flush=True)

@@ -8,7 +8,7 @@ import numpy as np, pandas as pd
 
 D = os.path.dirname(os.path.abspath(__file__))  # 이 폴더
 OUT = f"{D}/index_out"; os.makedirs(OUT, exist_ok=True)
-W, K = 20, 10              # 백분위 창(거래일), 분모 보정·장전 당김 크기(글 수)
+W, WMIN, K = 60, 20, 10    # 백분위 창 60거래일(B3, 앞부분은 20일부터 늘려 감), 평소 수준 쪽으로 당기는 크기(글 10건분, B7)
 START = "2024-10-28"   # 2024-10-27 이후 첫 거래일. 끝은 집계에 있는 마지막 거래일(진행 중인 오늘 포함)
 TD = pd.read_csv(f"{D}/trading_days.csv")["date"].tolist()
 import datetime as _dt
@@ -55,7 +55,7 @@ for code, g in d.groupby("code"):
 d = pd.concat(full).sort_values(["code", "date"]).reset_index(drop=True)
 
 def pct_rank(s):   # 직전 20거래일(오늘 포함) 안에서 오늘 값의 백분위 0~100
-    return s.rolling(W, min_periods=W).apply(lambda a: (np.sum(a < a[-1]) + 0.5 * (np.sum(a == a[-1]) - 1)) / (W - 1) * 100, raw=True)
+    return s.rolling(W, min_periods=WMIN).apply(lambda a: (np.sum(a < a[-1]) + 0.5 * (np.sum(a == a[-1]) - 1)) / (len(a) - 1) * 100, raw=True)
 
 def ent1(g, f):    # 쏠림 = 1 - 이진 엔트로피(긍정 vs 부정)
     n = g + f
@@ -67,20 +67,30 @@ out = []
 for code, g in d.groupby("code"):
     g = g.copy()
     N, G, F = g["n_posts"], g["n_greed"], g["n_fear"]
-    g["S"] = (G - F) / (N + K)                                         # 스탠스 = 감성지수
+    # B7: 글이 적은 날은 그 종목의 평소 수준(직전 60거래일 (탐욕-공포)/글 수 평균, 오늘 제외) 쪽으로 글 10건분 당긴다
+    base = ((G - F) / N.where(N > 0)).shift(1).rolling(W, min_periods=5).mean().fillna(0)
+    g["S"] = (G - F + K * base) / (N + K)                              # 스탠스 = 감성지수
     g["kw"] = (g["n_kw_greed"] - g["n_kw_fear"]) / N.where(N > 0)      # 키워드 강도
-    g["interest"] = N / N.shift(1).where(N.shift(1) > 0) - 1           # 관심도: 글 수 전일 대비 변화율
+    m20 = N.shift(1).rolling(20, min_periods=10).mean()
+    g["interest"] = N / m20.where(m20 > 0)                             # B2 관심도: 글 수 ÷ 직전 20거래일 평균
     g["concentration"] = ent1(G, F)                                    # 쏠림
     for c in ("S", "kw", "interest", "concentration"):
         g[f"p_{c}"] = pct_rank(g[c].fillna(0) if c != "interest" else g[c].fillna(0))
-    g["direction"] = g[["p_S", "p_kw"]].mean(axis=1, skipna=False)
-    g["strength"] = g[["p_interest", "p_concentration"]].mean(axis=1, skipna=False)
-    # 장전 감성: 평소 감성(직전 20거래일 (G-F)/N 평균, 오늘 제외)으로 K건 당김
-    base = ((G - F) / N.where(N > 0)).shift(1).rolling(W, min_periods=5).mean().fillna(0)
+    # 장전 감성: 같은 평소 수준으로 K건 당김
     g["pre_S"] = (g["pre_n_greed"] - g["pre_n_fear"] + K * base) / (g["pre_n_posts"] + K)
     g["p_pre_S"] = pct_rank(g["pre_S"])                               # 밤끼리 비교
     out.append(g)
 d = pd.concat(out)
+PCA = {}
+def pc1(cols):   # B6: 표준화한 두 하위 지표의 첫 주성분 가중치(합 1로 정규화)와 설명 비율
+    x = d[cols].dropna(); z = (x - x.mean()) / x.std()
+    val, vec = np.linalg.eigh(np.cov(z.T.values)); v = vec[:, -1] * np.sign(vec[:, -1].sum())
+    w = v / v.sum(); return dict(zip(cols, w.round(4).tolist())), float(val[-1] / val.sum()), float(x.corr().iloc[0, 1])
+for name, cols in (("direction", ["p_S", "p_kw"]), ("strength", ["p_interest", "p_concentration"])):
+    w, ev, r = pc1(cols); PCA[name] = {"weights": w, "explained": ev, "corr": r}
+    d[name] = sum(d[c] * w[c] for c in cols)
+json.dump(PCA, open(f"{OUT}/index_weights.json", "w"), ensure_ascii=False, indent=1)
+print("B6 가중치", PCA)
 
 def regime(dir_, st):
     if pd.isna(dir_) or pd.isna(st): return None
