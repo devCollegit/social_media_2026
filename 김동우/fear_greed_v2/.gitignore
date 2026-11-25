@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+synthetic_run/
+v2_out/

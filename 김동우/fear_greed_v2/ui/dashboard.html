@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>커뮤니티 심리 계측기</title>
+<style>
+:root{--ink:#1c2230;--quiet:#5d6676;--rule:#dfe3ea;--bg:#f6f7f9;--fear:#2f5fd0;--greed:#d64545;--warn:#b7791f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;font-size:15px;line-height:1.6;word-break:keep-all}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.app{border:1px solid #cfd5e0;border-radius:14px;overflow:hidden;background:#fff}
+.app-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:#141a26;color:#fff;padding:10px 14px}
+.brand{font-weight:700}.asof{font-size:12.5px;color:#aab3c5}
+.tabs{display:flex;gap:4px}
+.tabs button{font:inherit;font-size:14px;border:0;border-radius:8px;padding:5px 12px;background:transparent;color:#c8cfdc;cursor:pointer}
+.tabs button.on{background:#fff;color:#141a26;font-weight:600}
+.banner{background:#fff7e0;color:#7a5a08;font-size:13px;padding:6px 14px;border-bottom:1px solid #ecdcb8}
+.banner.real{background:#e6f4ec;color:#17694a;border-color:#bfe3cf}
+.view{display:none;padding:14px}.view.on{display:block}
+.grid2{display:grid;grid-template-columns:minmax(240px,300px) 1fr;gap:14px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+.panel{border:1px solid var(--rule);border-radius:10px;padding:12px}
+.panel h4{margin:0 0 8px;font-size:14.5px}
+.small{font-size:13px;color:var(--quiet)}
+.gauge-val{font-size:38px;font-weight:700;line-height:1;text-align:center;margin-top:-6px}
+.gauge-zone{text-align:center;font-weight:600;margin-top:2px}
+.sig{border-left:4px solid var(--quiet);background:#f7f8fb;border-radius:6px;padding:7px 10px;margin:6px 0;font-size:14px}
+.sig b{display:block}.sig.buy{border-color:var(--greed)}.sig.gap{border-color:var(--warn)}.sig.fear{border-color:var(--fear)}.sig.heat{border-color:#7a4bd0}
+.sig .hist{color:var(--quiet);font-size:13px}.sig a{cursor:pointer;text-decoration:underline;color:inherit}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:6px}
+.tile{border-radius:8px;padding:8px 9px;cursor:pointer;border:2px solid transparent;min-height:74px}
+.tile.on{border-color:#141a26}.tile .nm{font-size:13.5px;font-weight:600}.tile .ix{font-size:22px;font-weight:700;line-height:1.1}
+.tile .sh{font-size:11.5px;opacity:.85}.tile .bar{height:3px;background:rgba(0,0,0,.18);border-radius:2px;margin-top:4px}.tile .bar i{display:block;height:3px;background:currentColor;border-radius:2px}
+.legend{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--quiet);margin:0 0 8px}
+.legend .grad{flex:0 0 160px;height:8px;border-radius:4px;background:linear-gradient(90deg,#2f5fd0,#e9ecf1,#d64545)}
+.stocks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.stocks button,.chip{font:inherit;font-size:13.5px;border:1px solid var(--rule);background:#fff;border-radius:999px;padding:3px 11px;cursor:pointer}
+.chip{cursor:default;background:#f3f5f9}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+select{font:inherit;font-size:14px;padding:5px 8px;border:1px solid #c5ccd8;border-radius:8px;background:#fff}
+.seg{display:inline-flex;border:1px solid #c5ccd8;border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:14px;border:0;background:#fff;padding:5px 11px;cursor:pointer}.seg button.on{background:#141a26;color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}
+.kpi{border:1px solid var(--rule);border-radius:10px;padding:8px 11px}.kpi .l{font-size:12.5px;color:var(--quiet)}
+.kpi .v{font-size:21px;font-weight:700;line-height:1.25}.kpi .s{font-size:12.5px;color:var(--quiet)}
+.chartbox{position:relative;border:1px solid var(--rule);border-radius:10px;padding:6px 4px 2px}
+.chartbox svg{display:block;width:100%;height:auto}
+.tip{position:absolute;pointer-events:none;background:#141a26;color:#fff;font-size:12.5px;line-height:1.5;border-radius:6px;padding:6px 9px;display:none;white-space:nowrap;z-index:2}
+.below{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}@media(max-width:760px){.below{grid-template-columns:1fr}}
+.big{font-size:24px;font-weight:700}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid var(--rule);padding:5px 8px;text-align:left}th{background:#f0f2f6}
+tbody tr{cursor:pointer}tbody tr:hover td{background:#f5f7fb}
+.pill{display:inline-block;border-radius:999px;font-size:12px;font-weight:600;padding:0 8px}
+.err{padding:24px;font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="app" id="app">
+  <div class="app-bar">
+    <div><span class="brand">커뮤니티 심리 계측기</span> <span class="asof" id="asof"></span></div>
+    <div class="tabs" id="tabs"><button data-v="home" class="on">시장 홈</button><button data-v="stock">종목 상세</button><button data-v="brief">장전 브리핑</button></div>
+  </div>
+  <div class="banner" id="banner"></div>
+  <div class="view on" id="v-home">
+    <div class="grid2">
+      <div>
+        <div class="panel"><h4>시장 심리 (글 수 가중)</h4><div id="gauge"></div><div class="gauge-val" id="gval"></div><div class="gauge-zone" id="gzone"></div><p class="small" style="text-align:center;margin:6px 0 0" id="gsub"></p></div>
+        <div class="panel" style="margin-top:12px"><h4>오늘의 신호</h4><div id="signals"></div></div>
+      </div>
+      <div class="panel"><h4>섹터 지도</h4>
+        <div class="legend"><span>공포</span><span class="grad"></span><span>탐욕</span><span style="margin-left:auto">아래 막대 = 글 비중</span></div>
+        <div class="tiles" id="tiles"></div><div id="secbox" style="margin-top:12px"></div></div>
+    </div>
+  </div>
+  <div class="view" id="v-stock">
+    <div class="row"><select id="sel" aria-label="종목 선택"></select><div class="seg" id="range"><button data-r="60" class="on">60일</button><button data-r="140">전체</button></div><span class="small" id="sdesc"></span></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="chartbox" id="chartbox"><div class="tip" id="tip"></div><div id="chart"></div></div>
+    <div class="below">
+      <div class="panel"><h4>이런 날 과거에는</h4><div id="analog"></div></div>
+      <div class="panel"><h4>이 종목의 신호</h4><div id="ssig"></div><div id="wbox"></div></div>
+    </div>
+  </div>
+  <div class="view" id="v-brief">
+    <p style="margin-top:0"><b>밤사이 심리.</b> 전일 20:00부터 당일 09:00 전까지의 글입니다. <span style="color:var(--warn);font-weight:600">시가까지만 설명합니다. 09:00 이후 장중 수익률과는 관계가 확인되지 않았습니다.</span></p>
+    <div class="below" style="margin-top:0"><div class="panel"><h4>밤사이 공포가 큰 종목</h4><div id="bfear"></div></div><div class="panel"><h4>밤사이 탐욕이 큰 종목</h4><div id="bgreed"></div></div></div>
+    <div class="panel" style="margin-top:12px"><h4>과거 기록 (화면에 실린 기간)</h4><div id="bhist"></div></div>
+  </div>
+</div>
+<p class="small">데이터: <code>data.js</code> (toss_fear_greed_v2/build_ui_data.py로 생성). 지수 = S_shr의 60거래일 백분위, 밤 심리 = 야간 S의 60거래일 백분위, 개인 순매수 = 거래대금 대비 %, 예상 범위 = LightGBM 분위 회귀(10~90%).</p>
+</div>
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+var D=window.FG_DATA;
+function $(id){return document.getElementById(id);}
+if(!D){document.getElementById("app").innerHTML='<div class="err">data.js가 없습니다. <code>python build_ui_data.py --base &lt;toss_fear_greed 폴더&gt; --out v2_out --dest ../ui/data.js</code>로 만드세요.</div>';return;}
+var dates=D.dates,T=dates.length,LAST=T-1,NAMES=D.names,stocks=[],byCode={};
+Object.keys(D.sectors).forEach(function(sec){D.sectors[sec].forEach(function(c){var s=D.stocks[c];if(!s)return;s.code=c;s.name=NAMES[c];s.sector=sec;stocks.push(s);byCode[c]=s;});});
+var secNames=Object.keys(D.sectors);
+function ok(x){return x!==null&&x!==undefined&&isFinite(x);}
+function clamp(x,a,b){return Math.max(a,Math.min(b,x));}
+function zone(v){return !ok(v)?"자료 부족":v<25?"극단적 공포":v<45?"공포":v<=55?"중립":v<75?"탐욕":"극단적 탐욕";}
+function mix(a,b,x){return Math.round(a+(b-a)*x);}
+function color(v){if(!ok(v))return "#e3e6ec";var x=clamp(v,0,100),c;if(x<50){x=x/50;c=[mix(47,233,x),mix(95,236,x),mix(208,241,x)];}else{x=(x-50)/50;c=[mix(233,214,x),mix(236,69,x),mix(241,69,x)];}return "rgb("+c.join(",")+")";}
+function ink(v){return ok(v)&&(v<22||v>78)?"#fff":"#1c2230";}
+function f1(x){return ok(x)?(x>=0?"+":"")+x.toFixed(1):"—";}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+var MINPOST=10;
+
+/* ---------- 알림 규칙과 과거 기록 ---------- */
+var RULES=[
+ {k:"buy",cls:"buy",title:"개인 매수 집중 구간",test:function(s,t){return ok(s.ret[t])&&s.ret[t]<0&&ok(s.ratio[t])&&s.ratio[t]>=2;},why:function(s,t){return "주가 "+f1(s.ret[t])+"%, 글 수 평소의 "+s.ratio[t].toFixed(1)+"배";}},
+ {k:"gapw",cls:"gap",title:"말과 행동이 다름",test:function(s,t){return ok(s.idx[t])&&s.idx[t]>=75&&ok(s.priv[t])&&s.priv[t]<0;},why:function(s,t){return "심리 지수 "+Math.round(s.idx[t])+"(탐욕)인데 개인은 순매도 "+f1(s.priv[t])+"%";}},
+ {k:"open",cls:"fear",title:"약세 출발 가능성 (시가까지만)",open:true,test:function(s,t){return ok(s.nidx[t])&&s.nidx[t]<=15&&s.nposts[t]>=5;},why:function(s,t){return "밤사이 심리 하위 "+Math.round(s.nidx[t])+"%, 밤 글 "+s.nposts[t]+"건";}},
+ {k:"heat",cls:"heat",title:"관심 과열",test:function(s,t){return ok(s.ratio[t])&&s.ratio[t]>=3;},why:function(s,t){return "글 수 평소의 "+s.ratio[t].toFixed(1)+"배";}}];
+var HIST={};
+RULES.forEach(function(r){var n=0,pos=0,sum=0;stocks.forEach(function(x){for(var u=0;u<LAST;u++){if(!r.test(x,u))continue;
+  if(r.open){if(ok(x.gap[u])){n++;if(x.gap[u]<0)pos++;}}else if(ok(x.priv[u+1])){n++;sum+=x.priv[u+1];if(x.priv[u+1]>0)pos++;}}});
+  HIST[r.k]=!n?"과거 사례 없음":r.open?("과거 "+n+"번 중 "+pos+"번 하락 출발 ("+Math.round(pos/n*100)+"%)"):("과거 "+n+"번 중 "+pos+"번 다음 날 개인 순매수 (평균 "+f1(sum/n)+"%)");});
+function alerts(s,t){return RULES.filter(function(r){return r.test(s,t);}).map(function(r){return {k:r.k,cls:r.cls,title:r.title,why:r.why(s,t),hist:HIST[r.k]};});}
+function sigHtml(a,s){return '<div class="sig '+a.cls+'"><b>'+(s?'<a data-go="'+s.code+'">'+esc(s.name)+'</a> · ':'')+esc(a.title)+'</b>'+esc(a.why)+'<div class="hist">'+esc(a.hist)+'</div></div>';}
+
+/* ---------- 시장 홈 ---------- */
+function wavg(list,t){var a=0,w=0;list.forEach(function(s){if(ok(s.idx[t])&&s.posts[t]>=MINPOST){a+=s.idx[t]*s.posts[t];w+=s.posts[t];}});return w?a/w:null;}
+function drawGauge(v){var cx=130,cy=120,r=95,seg=[[0,25],[25,45],[45,55],[55,75],[75,100]],cols=[color(8),color(32),color(50),color(68),color(92)],h="";
+  function pt(val,rad){var a=Math.PI*(1-val/100);return [cx+rad*Math.cos(a),cy-rad*Math.sin(a)];}
+  seg.forEach(function(sg,i){var a=pt(sg[0],r),b=pt(sg[1],r);h+='<path d="M'+a[0].toFixed(1)+' '+a[1].toFixed(1)+' A'+r+' '+r+' 0 0 1 '+b[0].toFixed(1)+' '+b[1].toFixed(1)+'" fill="none" stroke="'+cols[i]+'" stroke-width="18"/>';});
+  if(ok(v)){var n=pt(v,r-22);h+='<line x1="'+cx+'" y1="'+cy+'" x2="'+n[0].toFixed(1)+'" y2="'+n[1].toFixed(1)+'" stroke="#141a26" stroke-width="4" stroke-linecap="round"/>';}
+  h+='<circle cx="'+cx+'" cy="'+cy+'" r="7" fill="#141a26"/><text x="22" y="138" font-size="11" fill="#5d6676">0 공포</text><text x="238" y="138" font-size="11" fill="#5d6676" text-anchor="end">탐욕 100</text>';
+  $("gauge").innerHTML='<svg viewBox="0 0 260 144" role="img" aria-label="시장 심리 게이지" style="display:block;width:100%;max-width:260px;margin:0 auto">'+h+'</svg>';}
+var selSec=secNames[0];
+function renderHome(){
+  var m=wavg(stocks,LAST),y=wavg(stocks,LAST-1),tot=0;stocks.forEach(function(s){tot+=s.posts[LAST]||0;});
+  drawGauge(m);$("gval").textContent=ok(m)?Math.round(m):"—";$("gval").style.color=!ok(m)?"var(--ink)":m<45?"var(--fear)":m>55?"var(--greed)":"var(--ink)";
+  $("gzone").textContent=zone(m);$("gsub").textContent="전일 "+(ok(y)?Math.round(y):"—")+" → 오늘 "+(ok(m)?Math.round(m):"—")+" · 글 "+tot.toLocaleString()+"건";
+  var all=[];stocks.forEach(function(s){alerts(s,LAST).forEach(function(a){all.push([a,s]);});});
+  var order={buy:0,gapw:1,open:2,heat:3};all.sort(function(p,q){return order[p[0].k]-order[q[0].k]||(q[1].ratio[LAST]||0)-(p[1].ratio[LAST]||0);});
+  $("signals").innerHTML=all.length?all.slice(0,5).map(function(p){return sigHtml(p[0],p[1]);}).join("")+(all.length>5?'<p class="small" style="margin:4px 0 0">외 '+(all.length-5)+'건</p>':''):'<p class="small">오늘은 신호가 없습니다.</p>';
+  var h="";secNames.forEach(function(sec){var list=stocks.filter(function(s){return s.sector===sec;});if(!list.length)return;var v=wavg(list,LAST),n=0;list.forEach(function(s){n+=s.posts[LAST]||0;});var sh=tot?n/tot*100:0;
+    h+='<div class="tile'+(sec===selSec?' on':'')+'" data-sec="'+esc(sec)+'" tabindex="0" role="button" style="background:'+color(v)+';color:'+ink(v)+'"><div class="nm">'+esc(sec)+'</div><div class="ix">'+(ok(v)?Math.round(v):"—")+'</div><div class="sh">'+zone(v)+' · 글 '+sh.toFixed(0)+'%</div><div class="bar"><i style="width:'+clamp(sh*2.2,3,100)+'%"></i></div></div>';});
+  $("tiles").innerHTML=h;
+  var list=stocks.filter(function(s){return s.sector===selSec;});
+  $("secbox").innerHTML='<b>'+esc(selSec)+'</b><div class="stocks">'+list.map(function(s){var v=s.idx[LAST];return '<button data-go="'+s.code+'"><span class="pill" style="background:'+color(v)+';color:'+ink(v)+'">'+(ok(v)?Math.round(v):"—")+'</span> '+esc(s.name)+(ok(s.ratio[LAST])?' · 글 '+s.ratio[LAST].toFixed(1)+'배':'')+'</button>';}).join("")+'</div>';
+}
+
+/* ---------- 종목 상세 ---------- */
+var cur=stocks[0].code,rangeN=Math.min(60,T);
+function renderStock(){
+  var s=byCode[cur],t=LAST;$("sdesc").textContent=s.sector+" · "+dates[t]+" 기준";
+  var pi=s.pi,k=[
+   ["심리 지수",ok(s.idx[t])?Math.round(s.idx[t]):"—",zone(s.idx[t]),true],
+   ["가격 뺀 심리",ok(s.resid[t])?Math.round(s.resid[t]):"—","잔차 심리 60일 백분위"],
+   ["글 수",(s.posts[t]||0).toLocaleString()+"건",ok(s.ratio[t])?"평소의 "+s.ratio[t].toFixed(1)+"배":""],
+   ["오늘 주가",f1(s.ret[t])+"%","시가 갭 "+f1(s.gap[t])+"%"],
+   ["인증 매수 비율",ok(s.buy[t])?Math.round(s.buy[t]*100)+"%":"—",ok(s.buy[t])?"매도 인증 "+Math.round((1-s.buy[t])*100)+"%":"인증 5건 미만"],
+   ["내일 개인 순매수 예상",pi?(f1(pi[0])+" ~ "+f1(pi[2])+"%"):"—",pi?"중앙값 "+f1(pi[1])+"% (10~90%)":"예측 없음"]];
+  $("kpis").innerHTML=k.map(function(x){var c=x[3]&&ok(s.idx[t])?(s.idx[t]<45?"var(--fear)":s.idx[t]>55?"var(--greed)":"var(--ink)"):"";return '<div class="kpi"><div class="l">'+x[0]+'</div><div class="v"'+(c?' style="color:'+c+'"':'')+'>'+x[1]+'</div><div class="s">'+x[2]+'</div></div>';}).join("");
+  drawChart(s);
+  var al=alerts(s,t);$("ssig").innerHTML=al.length?al.map(function(a){return sigHtml(a,null);}).join(""):'<p class="small">오늘은 신호가 없습니다.</p>';
+  var w=(D.words||{})[s.sector];$("wbox").innerHTML=w&&w.length?'<h4 style="margin-top:12px">이 섹터의 최근 대표 단어</h4><div class="stocks">'+w.map(function(x){return '<span class="chip">'+esc(x)+'</span>';}).join("")+'</div>':'';
+  renderAnalog(s);}
+function drawChart(s){
+  var W=900,L=56,Rr=14,pw=W-L-Rr,n=rangeN,st=T-n,H1=150,H2=96,H3=72,g=16,y1=18,y2=y1+H1+g+8,y3=y2+H2+g+8,H=y3+H3+26;
+  var x=function(i){return L+(i+0.5)*pw/n;},h="",pr=s.close.slice(st).filter(ok),mn=Math.min.apply(null,pr),mx=Math.max.apply(null,pr),pad=(mx-mn)*0.08||1;mn-=pad;mx+=pad;
+  var yp=function(v){return y1+H1-(v-mn)/(mx-mn)*H1;},yi=function(v){return y2+H2-v/100*H2;},po=s.posts.slice(st),pm=Math.max.apply(null,po.filter(ok).concat([1])),yb=function(v){return v/pm*H3;};
+  function lab(tx,y){h+='<text x="'+L+'" y="'+y+'" font-size="12" font-weight="600" fill="#1c2230">'+tx+'</text>';}
+  lab("주가",y1-5);lab("심리 지수 (0~100)",y2-5);lab("글 수 (진한 막대 = 평소의 2배 이상)",y3-5);
+  [mn+pad,(mn+mx)/2,mx-pad].forEach(function(v){h+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+yp(v).toFixed(1)+'" y2="'+yp(v).toFixed(1)+'" stroke="#eceff4"/><text x="'+(L-6)+'" y="'+(yp(v)+4).toFixed(1)+'" font-size="11" fill="#5d6676" text-anchor="end">'+Math.round(v).toLocaleString()+'</text>';});
+  h+='<rect x="'+L+'" y="'+yi(100)+'" width="'+pw+'" height="'+(yi(75)-yi(100))+'" fill="#d64545" opacity=".09"/><rect x="'+L+'" y="'+yi(25)+'" width="'+pw+'" height="'+(yi(0)-yi(25))+'" fill="#2f5fd0" opacity=".09"/>';
+  [0,25,50,75,100].forEach(function(v){h+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+yi(v)+'" y2="'+yi(v)+'" stroke="'+(v===50?"#c9cfda":"#eceff4")+'"/><text x="'+(L-6)+'" y="'+(yi(v)+4)+'" font-size="11" fill="#5d6676" text-anchor="end">'+v+'</text>';});
+  var dP="",dI="",pen1=false,pen2=false;for(var i=0;i<n;i++){var u=st+i;
+    if(ok(s.close[u])){dP+=(pen1?"L":"M")+x(i).toFixed(1)+" "+yp(s.close[u]).toFixed(1);pen1=true;}else pen1=false;
+    if(ok(s.idx[u])){dI+=(pen2?"L":"M")+x(i).toFixed(1)+" "+yi(s.idx[u]).toFixed(1);pen2=true;}else pen2=false;
+    var bh=yb(po[i]||0),hot=ok(s.ratio[u])&&s.ratio[u]>=2;h+='<rect x="'+(x(i)-pw/n*0.36).toFixed(1)+'" y="'+(y3+H3-bh).toFixed(1)+'" width="'+(pw/n*0.72).toFixed(1)+'" height="'+bh.toFixed(1)+'" fill="'+(hot?"#7a4bd0":"#c3cad8")+'"/>';}
+  h+='<path d="'+dP+'" fill="none" stroke="#141a26" stroke-width="1.8"/><path d="'+dI+'" fill="none" stroke="#b7791f" stroke-width="1.8"/><line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+(y3+H3)+'" y2="'+(y3+H3)+'" stroke="#c9cfda"/>';
+  var step=Math.ceil(n/6);for(i=0;i<n;i+=step)h+='<text x="'+x(i).toFixed(1)+'" y="'+(H-8)+'" font-size="11" fill="#5d6676" text-anchor="middle">'+dates[st+i].slice(5)+'</text>';
+  h+='<line id="cross" x1="0" x2="0" y1="'+y1+'" y2="'+(y3+H3)+'" stroke="#2f5fd0" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/><rect id="hit" x="'+L+'" y="'+y1+'" width="'+pw+'" height="'+(y3+H3-y1)+'" fill="transparent"/>';
+  $("chart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(s.name)+' 주가, 심리 지수, 글 수">'+h+'</svg>';
+  var svg=$("chart").firstChild,hit=svg.querySelector("#hit"),cross=svg.querySelector("#cross"),tip=$("tip"),box=$("chartbox");
+  function move(ev){var rc=svg.getBoundingClientRect(),cxp=(ev.touches?ev.touches[0].clientX:ev.clientX),sx=(cxp-rc.left)/rc.width*W,i=clamp(Math.floor((sx-L)/(pw/n)),0,n-1),u=st+i;
+    cross.setAttribute("x1",x(i));cross.setAttribute("x2",x(i));cross.setAttribute("visibility","visible");
+    tip.innerHTML="<b>"+dates[u]+"</b><br>주가 "+f1(s.ret[u])+"% · 지수 "+(ok(s.idx[u])?Math.round(s.idx[u]):"—")+" ("+zone(s.idx[u])+")<br>글 "+(s.posts[u]||0).toLocaleString()+"건"+(ok(s.ratio[u])?" ("+s.ratio[u].toFixed(1)+"배)":"")+" · 개인 "+f1(s.priv[u])+"%";
+    tip.style.display="block";var bx=box.getBoundingClientRect(),px=cxp-bx.left+12;if(px+tip.offsetWidth>bx.width-6)px=cxp-bx.left-tip.offsetWidth-12;tip.style.left=Math.max(4,px)+"px";tip.style.top="26px";}
+  function leave(){cross.setAttribute("visibility","hidden");tip.style.display="none";}
+  hit.addEventListener("mousemove",move);hit.addEventListener("mouseleave",leave);hit.addEventListener("touchstart",move,{passive:true});hit.addEventListener("touchmove",move,{passive:true});}
+function bucket(r){return !ok(r)?-1:r<1.25?0:r<2?1:2;}
+function renderAnalog(s){
+  var t=LAST;if(!ok(s.ret[t])){$("analog").innerHTML='<p class="small">오늘 주가 자료가 없습니다.</p>';return;}
+  var up=s.ret[t]>0,b=bucket(s.ratio[t]),vals=[];
+  stocks.forEach(function(x){for(var u=0;u<LAST;u++)if(ok(x.ret[u])&&(x.ret[u]>0)===up&&bucket(x.ratio[u])===b&&ok(x.priv[u+1]))vals.push(x.priv[u+1]);});
+  var n=vals.length,mean=0,pos=0;vals.forEach(function(v){mean+=v;if(v>0)pos++;});mean=n?mean/n:0;
+  var bins=[],lo=-15,stp=3,nb=10,i;for(i=0;i<nb;i++)bins.push(0);vals.forEach(function(v){bins[clamp(Math.floor((v-lo)/stp),0,nb-1)]++;});
+  var mxb=Math.max.apply(null,bins)||1,W=320,bw=W/nb,h="";
+  for(i=0;i<nb;i++){var bh=bins[i]/mxb*64;h+='<rect x="'+(i*bw+2)+'" y="'+(70-bh).toFixed(1)+'" width="'+(bw-4)+'" height="'+bh.toFixed(1)+'" fill="'+((lo+i*stp)>=0?"#d64545":"#2f5fd0")+'" opacity=".75"/>';}
+  h+='<line x1="0" x2="'+W+'" y1="70" y2="70" stroke="#c9cfda"/><text x="2" y="86" font-size="11" fill="#5d6676">−15%</text><text x="'+(W/2)+'" y="86" font-size="11" fill="#5d6676" text-anchor="middle">0</text><text x="'+(W-2)+'" y="86" font-size="11" fill="#5d6676" text-anchor="end">+15%</text>';
+  var cond=(up?"상승일":"하락일")+" + 글 수 "+(["평소 수준(1.25배 미만)","1.25~2배","2배 이상"][b]||"자료 부족");
+  $("analog").innerHTML='<p style="margin:0 0 6px">오늘 조건: <b>'+cond+'</b></p><div class="big">'+n.toLocaleString()+'번 중 '+pos.toLocaleString()+'번 <span style="font-size:15px;font-weight:600">다음 날 개인 순매수</span></div><p style="margin:2px 0 6px">다음 날 개인 순매수 평균 <b>'+f1(mean)+'%</b> (거래대금 대비)</p><svg viewBox="0 0 '+W+' 92" role="img" aria-label="다음 날 개인 순매수 분포" style="display:block;width:100%;max-width:340px">'+h+'</svg><p class="small" style="margin:4px 0 0">화면에 실린 기간 동안 같은 조건이던 날을 모은 기록입니다. 주가 방향에 대한 예측이 아닙니다.</p>';}
+
+/* ---------- 장전 브리핑 ---------- */
+function renderBrief(){
+  var t=LAST,list=stocks.filter(function(s){return ok(s.nidx[t])&&s.nposts[t]>=5;}).slice().sort(function(a,b){return a.nidx[t]-b.nidx[t];});
+  function tb(arr){return arr.length?'<table><thead><tr><th>종목</th><th>밤 심리</th><th>밤 글</th><th>전일 주가</th></tr></thead><tbody>'+arr.map(function(s){return '<tr data-go="'+s.code+'"><td>'+esc(s.name)+'</td><td><span class="pill" style="background:'+color(s.nidx[t])+';color:'+ink(s.nidx[t])+'">'+Math.round(s.nidx[t])+'</span></td><td>'+s.nposts[t]+'건</td><td>'+f1(s.ret[t-1])+'%</td></tr>';}).join("")+'</tbody></table>':'<p class="small">밤 글 5건 이상인 종목이 없습니다.</p>';}
+  $("bfear").innerHTML=tb(list.slice(0,5));$("bgreed").innerHTML=tb(list.slice(-5).reverse());
+  var lo=[0,0],hi=[0,0];stocks.forEach(function(x){for(var u=0;u<=LAST;u++){if(!(x.nposts[u]>=5)||!ok(x.nidx[u])||!ok(x.gap[u]))continue;if(x.nidx[u]<=20){lo[0]++;if(x.gap[u]>0)lo[1]++;}if(x.nidx[u]>=80){hi[0]++;if(x.gap[u]>0)hi[1]++;}}});
+  function pc(a){return a[0]?Math.round(a[1]/a[0]*100)+"%":"—";}
+  $("bhist").innerHTML='<div class="kpis" style="margin:0"><div class="kpi"><div class="l">밤 심리 하위 20%였던 날</div><div class="v" style="color:var(--fear)">'+pc(lo)+'</div><div class="s">상승 출발 비율 ('+lo[0].toLocaleString()+'번)</div></div><div class="kpi"><div class="l">밤 심리 상위 20%였던 날</div><div class="v" style="color:var(--greed)">'+pc(hi)+'</div><div class="s">상승 출발 비율 ('+hi[0].toLocaleString()+'번)</div></div></div>';}
+
+/* ---------- 이벤트 ---------- */
+function show(v){["home","stock","brief"].forEach(function(k){$("v-"+k).classList.toggle("on",k===v);});Array.prototype.forEach.call($("tabs").children,function(b){b.classList.toggle("on",b.getAttribute("data-v")===v);});if(v==="stock")renderStock();}
+function go(code){cur=code;$("sel").value=code;show("stock");}
+$("tabs").addEventListener("click",function(e){var v=e.target.getAttribute("data-v");if(v)show(v);});
+$("app").addEventListener("click",function(e){var el=e.target.closest("[data-go]");if(el){go(el.getAttribute("data-go"));return;}var tl=e.target.closest("[data-sec]");if(tl){selSec=tl.getAttribute("data-sec");renderHome();}});
+$("tiles").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){var tl=e.target.closest("[data-sec]");if(tl){e.preventDefault();selSec=tl.getAttribute("data-sec");renderHome();}}});
+$("range").addEventListener("click",function(e){var r=e.target.getAttribute("data-r");if(!r)return;rangeN=Math.min(+r,T);Array.prototype.forEach.call($("range").children,function(b){b.classList.toggle("on",b===e.target);});renderStock();});
+var opt="";secNames.forEach(function(sec){opt+='<optgroup label="'+esc(sec)+'">';D.sectors[sec].forEach(function(c){if(byCode[c])opt+='<option value="'+c+'">'+esc(NAMES[c])+'</option>';});opt+='</optgroup>';});
+$("sel").innerHTML=opt;$("sel").addEventListener("change",function(){cur=this.value;renderStock();});
+$("asof").textContent=D.asof+" 20:00 마감 기준";
+var bn=$("banner");if(D.label==="실제"){bn.className="banner real";bn.textContent="실제 데이터 · "+dates[0]+" ~ "+D.asof+" · 종목 "+stocks.length+"개";}
+else bn.textContent=D.label+" 데이터입니다. 코드가 동작하는지 보이기 위한 값이며 실제 시장이 아닙니다. 실제 집계로 data.js를 다시 만들면 그대로 바뀝니다.";
+renderHome();renderBrief();
+})();
+</script>
+</body>
+</html>

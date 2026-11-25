@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>토스증권 공포탐욕지수 보완 제안</title>
+<style>
+:root{
+  --ink:#1c2230; --quiet:#5d6676; --rule:#dfe3ea; --bg:#f6f7f9; --card:#ffffff; --head:#f0f2f6;
+  --accent:#2f5fd0; --fear:#2f5fd0; --greed:#d64545; --warn:#b7791f; --ok:#1f8a5b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;font-size:15.5px;line-height:1.7;word-break:keep-all}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 16px 80px}
+header h1{font-size:28px;line-height:1.3;margin:0 0 6px;letter-spacing:-.4px}
+header .meta{color:var(--quiet);font-size:14px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 8px}
+nav a{font-size:13.5px;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--rule);border-radius:999px;padding:4px 12px}
+nav a:hover{border-color:var(--accent);color:var(--accent)}
+section{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:22px 22px 18px;margin-top:18px}
+h2{font-size:20px;margin:0 0 6px;letter-spacing:-.3px}
+h2 .n{color:var(--accent);margin-right:8px}
+h3{font-size:16.5px;margin:20px 0 6px}
+p{margin:6px 0 10px}
+.lead{font-size:16.5px}
+.tbl{overflow-x:auto;margin:8px 0 12px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.55;min-width:560px}
+th,td{border:1px solid var(--rule);padding:7px 9px;vertical-align:top;text-align:left}
+th{background:var(--head);font-weight:600;white-space:nowrap}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:#eef1f6;border-radius:4px;padding:1px 4px;word-break:break-all}
+ul,ol{margin:6px 0 10px;padding-left:22px}
+li{margin:3px 0}
+a{color:var(--accent)}
+.tag{display:inline-block;font-size:12px;font-weight:600;border-radius:5px;padding:0 6px;margin-right:4px;white-space:nowrap;line-height:1.7}
+.tag.cpu{background:#e6f4ec;color:#17694a}.tag.cc{background:#ebe9fb;color:#4a3bb0}.tag.gpu{background:#fdecd8;color:#9a5a0b}.tag.req{background:#fde8e8;color:#a52a2a}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:10px 0}
+.card{border:1px solid var(--rule);border-radius:10px;padding:12px 14px;background:#fbfcfe}
+.card b.t{display:block;font-size:15.5px;margin-bottom:2px}
+.note{background:#fdf8ee;border:1px solid #ecdcb8;border-left:4px solid var(--warn);border-radius:6px;padding:9px 12px;margin:10px 0;font-size:14.5px}
+.formula{background:var(--head);border-radius:8px;padding:8px 12px;margin:8px 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;overflow-x:auto;white-space:nowrap}
+.small{font-size:13.5px;color:var(--quiet)}
+
+/* ---------- UI 목업 ---------- */
+.app{border:1px solid #cfd5e0;border-radius:14px;overflow:hidden;margin-top:12px;background:#fff}
+.app-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:#141a26;color:#fff;padding:10px 14px}
+.app-bar .brand{font-weight:700;letter-spacing:-.2px}
+.app-bar .asof{font-size:12.5px;color:#aab3c5}
+.tabs{display:flex;gap:4px}
+.tabs button{font:inherit;font-size:14px;border:0;border-radius:8px;padding:5px 12px;background:transparent;color:#c8cfdc;cursor:pointer}
+.tabs button.on{background:#fff;color:#141a26;font-weight:600}
+.sample{background:#fff7e0;color:#7a5a08;font-size:13px;padding:6px 14px;border-bottom:1px solid #ecdcb8}
+.view{display:none;padding:14px}
+.view.on{display:block}
+.grid2{display:grid;grid-template-columns:minmax(240px,300px) 1fr;gap:14px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+.panel{border:1px solid var(--rule);border-radius:10px;padding:12px}
+.panel h4{margin:0 0 8px;font-size:14.5px}
+.gauge-val{font-size:38px;font-weight:700;line-height:1;text-align:center;margin-top:-6px}
+.gauge-zone{text-align:center;font-weight:600;margin-top:2px}
+.sig{border-left:4px solid var(--quiet);background:#f7f8fb;border-radius:6px;padding:7px 10px;margin:6px 0;font-size:14px}
+.sig b{display:block}
+.sig.buy{border-color:var(--greed)}.sig.gap{border-color:var(--warn)}.sig.fear{border-color:var(--fear)}.sig.heat{border-color:#7a4bd0}
+.sig .hist{color:var(--quiet);font-size:13px}
+.sig a{cursor:pointer;text-decoration:underline}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:6px}
+.tile{border-radius:8px;padding:8px 9px;cursor:pointer;border:2px solid transparent;min-height:74px}
+.tile.on{border-color:#141a26}
+.tile .nm{font-size:13.5px;font-weight:600}
+.tile .ix{font-size:22px;font-weight:700;line-height:1.1}
+.tile .sh{font-size:11.5px;opacity:.85}
+.tile .bar{height:3px;background:rgba(0,0,0,.18);border-radius:2px;margin-top:4px}
+.tile .bar i{display:block;height:3px;background:currentColor;border-radius:2px}
+.legend{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--quiet);margin:8px 0 2px}
+.legend .grad{flex:0 0 160px;height:8px;border-radius:4px;background:linear-gradient(90deg,#2f5fd0,#e9ecf1,#d64545)}
+.stocks{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.stocks button,.chip{font:inherit;font-size:13.5px;border:1px solid var(--rule);background:#fff;border-radius:999px;padding:3px 11px;cursor:pointer}
+.stocks button:hover{border-color:var(--accent);color:var(--accent)}
+.chip{cursor:default;background:#f3f5f9}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+select,.seg button{font:inherit;font-size:14px}
+select{padding:5px 8px;border:1px solid #c5ccd8;border-radius:8px;background:#fff}
+.seg{display:inline-flex;border:1px solid #c5ccd8;border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:5px 11px;cursor:pointer}
+.seg button.on{background:#141a26;color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}
+.kpi{border:1px solid var(--rule);border-radius:10px;padding:8px 11px}
+.kpi .l{font-size:12.5px;color:var(--quiet)}
+.kpi .v{font-size:22px;font-weight:700;line-height:1.25}
+.kpi .s{font-size:12.5px;color:var(--quiet)}
+.chartbox{position:relative;border:1px solid var(--rule);border-radius:10px;padding:6px 4px 2px}
+.chartbox svg{display:block;width:100%;height:auto}
+.tip{position:absolute;pointer-events:none;background:#141a26;color:#fff;font-size:12.5px;line-height:1.5;border-radius:6px;padding:6px 9px;display:none;white-space:nowrap;z-index:2}
+.below{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:760px){.below{grid-template-columns:1fr}}
+.big{font-size:24px;font-weight:700}
+.btable{width:100%;min-width:0;font-size:14px}
+.btable td,.btable th{padding:5px 8px}
+.btable tr{cursor:pointer}
+.btable tr:hover td{background:#f5f7fb}
+.pill{display:inline-block;border-radius:999px;font-size:12px;font-weight:600;padding:0 8px;color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>토스증권 공포탐욕지수 보완 제안</h1>
+  <div class="meta">류창민 님께 · 작성 김동우 · 2026-11-24 · 검토 대상: 레포 <code>류창민/toss_fear_greed/</code> 코드 24개 파일, 발표자료 34장</div>
+</header>
+
+<nav>
+  <a href="#s0">요약</a><a href="#s1">가용 자원</a><a href="#s2">버려지는 정보</a><a href="#s3">모델</a><a href="#s4">지수</a>
+  <a href="#s5">분석 로직</a><a href="#s6">발표 문구</a><a href="#s7">결론 확장 · UI 목업</a><a href="#s8">요청드릴 것</a><a href="#s9">진행 순서</a><a href="#s10">구현 현황</a><a href="#s11">출처</a>
+</nav>
+
+<section id="s0">
+  <h2><span class="n">0</span>요약</h2>
+  <p class="lead">1,257만 건을 모으고 표본 판정 → 분류 모델 → 지수 → 수급 분석까지 이은 뼈대는 그대로 두고, 그 위에 세 층을 올리자는 제안입니다. 코드를 읽고 쓴 것이고, 원문·라벨·결과 파일이 레포에 없어 제가 직접 돌려 본 것은 없습니다.</p>
+  <div class="cards">
+    <div class="card"><b class="t">① 버려지는 정보 되살리기</b>확률값, 부모 글, 매수·매도 인증, 5개 라벨, 30분 집계가 중간에 버려집니다. 새 기법보다 이쪽 효과가 먼저입니다.</div>
+    <div class="card"><b class="t">② 지수를 세기에서 추정으로</b>판정 수를 세는 대신 확률을 더하고 오분류율로 보정합니다. 가격으로 설명되는 부분을 뺀 잔차 심리와 행동 축을 더합니다.</div>
+    <div class="card"><b class="t">③ 결론을 서비스로</b>“주가를 따라간다”에서 멈추지 않고 “개인 투자자의 행동을 재는 계측기”로 바꿉니다. 아래 7장에 동작하는 화면을 넣었습니다.</div>
+  </div>
+  <p class="small">각 항목의 표지: <span class="tag cpu">GPU 불필요</span> 지금 PC로 가능 · <span class="tag cc">Claude Code</span> 에이전트 판정 필요 · <span class="tag gpu">GPU 필요</span> · <span class="tag req">재적용</span> 원문에 다시 돌려야 함</p>
+</section>
+
+<section id="s1">
+  <h2><span class="n">1</span>가용 자원 전제</h2>
+  <p>보완안은 “GPU가 없고, 쓸 수 있는 LLM은 Claude Code뿐”이라는 조건에 맞췄습니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>자원</th><th>현황</th><th>보완안에 주는 의미</th></tr></thead>
+    <tbody>
+      <tr><td>LLM</td><td>Claude Code만 사용 가능. API 일괄 호출은 없음</td><td>1,257만 건 전체를 LLM으로 판정하는 길은 없습니다(발표 14장 계산으로 한 줄 처리 시 약 61일). 지금의 “표본 판정 → 모델 적용” 구조를 유지합니다. 다만 <code>batch_task.md</code> 방식(1,000건 묶음에 약 7분)으로 수천~1만 건 추가 판정은 현실적입니다.</td></tr>
+      <tr><td>GPU 없음</td><td>CPU만</td><td>3장의 A1~A7은 전부 CPU로 됩니다. 지금 모델(TF-IDF + 로지스틱 회귀)이 1,257만 건을 17분에 처리하므로 재적용 부담도 작습니다.</td></tr>
+      <tr><td>RTX 3080을 쓸 수 있다면</td><td>VRAM은 10GB(후기형 12GB, 노트북용은 8GB 또는 16GB)</td><td>base 크기 한국어 인코더(<a href="https://huggingface.co/beomi/KcELECTRA-base">KcELECTRA-base</a>, 가중치 파일 약 500MB) 미세조정은 반정밀도·문장 길이 128·배치 32 조건이면 10GB 안에서 될 것으로 봅니다. 직접 재 본 값이 아닌 추정입니다.</td></tr>
+      <tr><td>무료 GPU 노트북</td><td>Colab, Kaggle</td><td>GPU가 없을 때의 대안입니다. 학습 데이터가 2.9만 건이라 학습은 가볍습니다. 1,257만 건 적용은 사용 시간 제한 때문에 여러 번에 나눠야 할 수 있습니다.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">2</span>지금 코드에서 버려지는 정보</h2>
+  <p>이미 수집하거나 계산해 놓고 다음 단계에서 쓰지 않는 것들입니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>버려지는 것</th><th>코드 근거</th><th>되살리면</th></tr></thead>
+    <tbody>
+      <tr><td>확률값</td><td><code>featurize.py</code>의 <code>THRESHOLD = 0.7</code>, <code>apply_all2.py</code>의 <code>classify()</code>가 0.7 미만을 0으로 처리</td><td>판정 비율 26% 문제가 사라지고 전체 글이 지수에 반영됩니다</td></tr>
+      <tr><td>Haiku의 5개 라벨</td><td><code>train_final.py</code>가 탐욕·공포·그 외 3개로 합침</td><td>무관 글(광고·잡담)을 분모에서 뺄 수 있습니다</td></tr>
+      <tr><td>부모 글 문맥</td><td><code>lr_trial.py</code>에서 시험만 하고 최종 모델은 본문만 사용</td><td>“저도요”, “ㄹㅇ” 같은 대댓글을 판정할 수 있습니다</td></tr>
+      <tr><td>매수·매도 인증, 보유 여부</td><td><code>make_sample.py</code>가 표본에 담지만 모델·지수·분석에 없음</td><td>“말과 행동의 괴리”를 커뮤니티 안에서 직접 잴 수 있습니다</td></tr>
+      <tr><td>30분 단위 집계</td><td><code>apply_all2.py</code>가 30분 칸으로 저장, 분석은 일 단위</td><td>장중 지수와 30분 갱신 화면이 가능합니다</td></tr>
+      <tr><td>공매도, 고가·저가</td><td><code>fetch_krx_login.py</code>가 <code>krx_short.json</code>을 받지만 미사용. <code>ohlcv.json</code>의 고가·저가도 미사용</td><td>변동폭·공매도를 분석 대상으로 추가할 수 있습니다</td></tr>
+      <tr><td>쏠림·강도·국면</td><td><code>build_index.py</code>가 계산하지만 분석 스크립트는 원점수 S만 사용</td><td>발표 제목의 “지수”가 실제로 검증됩니다</td></tr>
+      <tr><td>지수 시가</td><td><code>analysis_krx.py</code>가 <code>m_open</code>을 읽고 쓰지 않음</td><td>당일 시장 갭을 통제 변수로 바로 만들 수 있습니다</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">3</span>모델 보완</h2>
+  <p>지금 모델은 글자 조각(2~4글자) TF-IDF에 로지스틱 회귀를 얹은 3분류기입니다. 빠르고 재현이 쉬운 장점은 살리고, 입력과 출력을 넓힙니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>보완</th><th>어떻게</th><th>자원</th></tr></thead>
+    <tbody>
+      <tr><td>A1</td><td><b>확률을 그대로 더하기</b></td><td><code>classify()</code>가 1/−1/0 대신 탐욕·공포 확률을 반환하고, 집계 파일에 <code>p_greed</code>, <code>p_fear</code> 합계 열을 추가합니다. 탐욕 확률 0.6인 글은 0.6건으로 셉니다.</td><td><span class="tag cpu">GPU 불필요</span><span class="tag req">재적용</span></td></tr>
+      <tr><td>A2</td><td><b>확률 보정</b></td><td>채점용 묶음으로 확률 보정(<code>CalibratedClassifierCV</code>)을 한 번 합니다. A1의 합계가 실제 비율에 가까워집니다.</td><td><span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>A3</td><td><b>라벨 5개 유지</b></td><td>탐욕·공포·중립·무관·애매로 학습합니다. 무관으로 판정된 글은 지수 분모에서 뺍니다.</td><td><span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>A4</td><td><b>부모 글·인증·보유 입력 추가</b></td><td><code>lr_trial.py</code>의 부모 글 결합(가중 0.5)을 최종 모델에 넣고, 대댓글 여부·인증(BUY/SELL)·보유 여부를 0/1 변수로 붙입니다. 적용 단계에서 종목별 <code>post_id → 본문</code> 사전이 필요합니다.</td><td><span class="tag cpu">GPU 불필요</span><span class="tag req">재적용</span></td></tr>
+      <tr><td>A5</td><td><b>단어 단위 특징 추가</b></td><td><code>extract_keywords.py</code>의 <code>tokens()</code>(부정 “안 오르다” 처리 포함)를 둘째 TF-IDF 블록으로 붙입니다.</td><td><span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>A6</td><td><b>헷갈리는 글만 골라 추가 판정</b></td><td>모델 확률이 0.4~0.7인 글과 글 많은 종목(삼성전자·SK하이닉스) 글을 5천~1만 건 뽑아 같은 <code>batch_task.md</code> 절차로 판정합니다. 무작위 표본보다 같은 판정 수로 더 많이 배웁니다(<a href="https://arxiv.org/html/2411.08028v3">LLKD</a>가 이 방식).</td><td><span class="tag cc">Claude Code</span></td></tr>
+      <tr><td>A7</td><td><b>교사 판정의 일관성 점검</b></td><td>같은 1,000건을 다른 에이전트가 다시 판정해 일치율을 잽니다. 가능하면 상위 모델로도 1,000건을 판정해 Haiku와 비교합니다. 사람 없이 라벨 품질의 하한을 알 수 있습니다.</td><td><span class="tag cc">Claude Code</span></td></tr>
+      <tr><td>A8</td><td><b>라벨을 여러 축으로</b></td><td>탐욕/공포 한 축에 더해 감정 종류(공포·분노·기대 등), 행동 의도(매수·매도·보유), 대상(종목·시장·세력)을 판정합니다. 제가 만든 지침 초안이 있고, 100건을 두 에이전트가 따로 판정했을 때 감정 항목 일치도(κ)가 0.94였습니다. 원하시면 공유하겠습니다.</td><td><span class="tag cc">Claude Code</span></td></tr>
+      <tr><td>A9</td><td><b>한국어 사전학습 모델로 교체</b></td><td>Haiku 판정을 정답 삼아 <a href="https://huggingface.co/beomi/KcELECTRA-base">KcELECTRA</a>를 미세조정합니다. 입력은 “본문 [SEP] 부모 글”에 인증·보유 표지를 붙입니다. 댓글 말투로 학습된 모델이라 게시판 은어에 맞습니다. <a href="https://huggingface.co/snunlp/KR-FinBert-SC">KR-FinBert-SC</a>는 뉴스·애널리스트 리포트로 학습돼 거리가 있습니다.</td><td><span class="tag gpu">GPU 필요</span><span class="tag req">재적용</span></td></tr>
+    </tbody>
+  </table></div>
+  <h3>어떤 모델을 쓰면 되는지: 글 분류기</h3>
+  <p>추천은 <b>1번을 먼저 완성하고, 5번(KcELECTRA-base)을 무료 GPU 노트북에서 학습해 같은 채점 묶음으로 비교한 뒤, 이기면 교체</b>하는 순서입니다. 학습 데이터가 2.9만 건이라 학습 자체는 가볍고, 무거운 것은 1,257만 건 적용입니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>모델</th><th>어디서 돌리나</th><th>언제 쓰나</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>지금 구조 강화</b><br>글자 TF-IDF + 단어 TF-IDF + 부모 글 + 인증·보유 → 로지스틱 회귀</td><td><span class="tag cpu">GPU 불필요</span> 전체 적용 수십 분</td><td>가장 먼저. 이후 모든 후보의 기준선입니다 (A1~A5).</td></tr>
+      <tr><td>2</td><td><b>같은 특징에 다른 선형 모델</b><br>LinearSVC + 확률 보정, NB-SVM(탐욕·공포 로그비로 특징에 가중치를 준 선형 모델)</td><td><span class="tag cpu">GPU 불필요</span></td><td>1번과 나란히 돌려 더 나은 쪽을 고릅니다. 코드 몇 줄 차이입니다.</td></tr>
+      <tr><td>3</td><td><b>fastText</b><br>글자 조각을 내장한 얕은 신경망 분류기</td><td><span class="tag cpu">GPU 불필요</span> 매우 빠름</td><td>은어·오타가 많은 짧은 글에 맞습니다. TF-IDF 계열과 다른 방식이라 둘을 평균하면 안정적입니다.</td></tr>
+      <tr><td>4</td><td><b>작은 사전학습 모델</b><br><a href="https://huggingface.co/monologg/koelectra-small-v3-discriminator">KoELECTRA-small-v3</a> (약 1,400만 파라미터로 추정)</td><td>학습은 무료 GPU 노트북. 적용은 CPU도 가능하지만 1,257만 건은 수 시간~반나절로 예상</td><td>GPU를 오래 못 쓸 때의 절충안입니다. 10만 건으로 먼저 시간을 재 보고 결정합니다.</td></tr>
+      <tr><td>5</td><td><b>base 크기 사전학습 모델</b><br>1순위 <a href="https://huggingface.co/beomi/KcELECTRA-base">KcELECTRA-base</a>(댓글 말투 학습), 비교용 <a href="https://huggingface.co/klue/roberta-base">klue/roberta-base</a>(범용 한국어)</td><td><span class="tag gpu">GPU 필요</span> RTX 3080 또는 무료 T4</td><td>문맥(부모 글, 반어, 부정)을 읽어야 하는 글에서 차이가 날 것으로 기대합니다.</td></tr>
+      <tr><td>6</td><td><b>참고용</b> <a href="https://huggingface.co/snunlp/KR-FinBert-SC">KR-FinBert-SC</a></td><td><span class="tag gpu">GPU 필요</span></td><td>뉴스·리포트로 학습돼 그대로는 맞지 않습니다. 5번과 같은 조건으로 미세조정해 비교만 합니다.</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>권하지 않는 것:</b> 로컬 생성형 LLM으로 전체를 판정하는 방식(GPU 없이는 불가), 문장 임베딩을 뽑아 선형 모델에 넣는 방식(CPU로 1,257만 건 임베딩이 오래 걸림)입니다.</p>
+  <p><b>5번의 학습 설정 출발값:</b> 입력은 “본문 [SEP] 부모 글”, 최대 128토큰, 학습률 2e-5~5e-5, 3~5 에폭, 배치 32, 반정밀도입니다. 통상 쓰는 출발값이고 이 데이터에서 검증한 값은 아닙니다.</p>
+  <h3>모델을 고르는 기준</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>지표</th><th>뜻</th><th>우선순위</th></tr></thead>
+    <tbody>
+      <tr><td>월별·일별 탐욕 비율 오차</td><td>모델이 낸 비율이 LLM 판정 비율과 얼마나 같은가</td><td>1순위. 지수는 비율로 만들기 때문입니다</td></tr>
+      <tr><td>5개 라벨 macro-F1</td><td>글 단위로 얼마나 맞히는가</td><td>2순위</td></tr>
+      <tr><td>확률 보정 오차</td><td>“확률 0.7”이라고 한 글이 실제로 70% 맞는가</td><td>확률을 더하는 방식(A1)의 전제</td></tr>
+      <tr><td>이전 1년 성능</td><td>학습에 없던 시기에도 통하는가</td><td><code>lr_prevyear.py</code> 그대로 사용</td></tr>
+      <tr><td>전체 적용 시간</td><td>1,257만 건을 다시 돌리는 데 드는 시간</td><td>재실행 가능해야 합니다</td></tr>
+    </tbody>
+  </table></div>
+  <h3>교사 모델: Claude Code 안에서</h3>
+  <ul>
+    <li><b>대량 판정은 Haiku</b>로 지금처럼 진행합니다.</li>
+    <li><b>점검과 어려운 글은 상위 모델</b>(Sonnet, Opus)을 씁니다. 같은 1,000건을 두 모델이 판정해 갈린 글만 상위 모델의 판정을 따르면, 적은 판정 수로 라벨 품질을 올릴 수 있습니다.</li>
+  </ul>
+  <h3>채점 방식 보완</h3>
+  <ul>
+    <li>지금 채점은 같은 표본을 섞어 나눈 묶음(b17~b22)과 이전 1년(<code>lr_prevyear.py</code>)입니다. 여기에 <b>글 수로 가중한 종목별 정확도</b>, <b>원글과 대댓글 각각</b>, <b>급등락일</b>의 정확도를 더합니다. 표본이 종목·월마다 56건 균등이라 글이 몰린 대형주 성능이 평균에 가려집니다.</li>
+    <li>글 단위 정확도와 별개로 <b>월별·일별 탐욕 비율이 LLM 판정과 얼마나 같은지</b>를 주 지표로 둡니다. 이미 <code>lr_trial.py</code>가 “달별 비율 평균오차”를 내고 있어 확장만 하면 됩니다.</li>
+  </ul>
+</section>
+
+<section id="s4">
+  <h2><span class="n">4</span>지수 보완</h2>
+  <p>지금 지수는 판정 수를 세어 만든 <code>S = (탐욕 − 공포) ÷ (전체 + 10)</code>을 20거래일 백분위로 바꾼 값입니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>문제</th><th>코드 근거</th><th>보완</th><th>자원</th></tr></thead>
+    <tbody>
+      <tr><td>B1</td><td>분류 결과를 그대로 세면 비율이 치우침</td><td>0.7 기준 판정 수 합산</td><td><b>보정 집계.</b> 채점 묶음에서 잰 적중률·오탐률로 비율을 보정합니다. 단순 집계의 편향은 글이 많아져도 줄지 않습니다(<a href="https://ar5iv.labs.arxiv.org/html/2011.02552">Moreo &amp; Sebastiani</a>, <a href="https://arxiv.org/pdf/2011.08091">트윗 감성 재평가</a>).</td><td><span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>B2</td><td>관심도 정의가 두 가지</td><td><code>build_index.py</code>는 전일 대비 변화율, <code>analysis_presentation.py</code>는 20일 평균 대비 배수</td><td>20일 평균 대비 배수로 통일합니다. 전일 대비는 잡음이 큽니다.</td><td><span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>B3</td><td>20일 백분위가 거침</td><td><code>W = 20</code>, 값이 20단계뿐</td><td>60일 이상 창이나 지수가중 표준화로 바꿉니다.</td><td><span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>B4</td><td>가격과 중복</td><td>수익률 1%p → 심리 +0.094σ (발표 30장)</td><td><b>잔차 심리.</b> 그날 수익률과 시장 수익률로 설명되는 부분을 뺀 값을 따로 냅니다. “올랐는데도 공포인 날”을 잡습니다.</td><td><span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>B5</td><td>행동 지표 없음</td><td>인증·보유 미집계</td><td>매수 인증 비율, 보유자와 비보유자의 심리를 별도 축으로 냅니다. 집계 파일에 <code>n_buy</code>, <code>n_sell</code>, <code>n_holding</code> 열이 필요합니다.</td><td><span class="tag cpu">GPU 불필요</span><span class="tag req">재적용</span></td></tr>
+      <tr><td>B6</td><td>하위 지표를 단순 평균, 국면 기준 고정</td><td>방향 = 두 백분위 평균, 기준 56·45·80</td><td>주성분으로 묶거나 개인 수급을 잘 설명하는 가중치를 학습합니다. 국면 기준도 이후 성과를 보고 정합니다.</td><td><span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>B7</td><td>+10 보정이 임의값</td><td><code>K = 10</code></td><td>야간 심리에 이미 쓰고 있는 “종목의 평소 수준 쪽으로 당기기”를 일간 지수에도 적용해 통일합니다.</td><td><span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>B8</td><td>글 하나가 한 표</td><td>작성자 식별자를 수집하지 않음</td><td>수집 단계에서 익명 해시를 남기면 “고유 작성자 수” 기준 지수를 만들 수 있습니다. 한 사람이 수십 번 쓰는 왜곡을 막습니다.</td><td>수집 변경</td></tr>
+    </tbody>
+  </table></div>
+  <div class="formula">보정 집계(B1): 실제 비율 ≈ (집계 비율 − 오탐률) ÷ (적중률 − 오탐률)</div>
+  <div class="formula">잔차 심리(B4): S(종목, 일) = 종목 평균 + b × 당일 수익률 + c × 시장 수익률 + 잔차 → 잔차를 지수로</div>
+  <p>참고할 선행 지표가 있습니다. Antweiler와 Frank의 <a href="https://wernerantweiler.ca/public/noise-a.pdf">게시판 연구</a>는 강세 지수를 <code>ln[(1+매수 글)/(1+매도 글)]</code>로 정의했고 의견 일치 지수도 함께 썼습니다. 지금의 “쏠림”이 같은 개념입니다. 다만 두 지수가 수식 때문에 기계적으로 상관된다는 <a href="https://www.frontiersin.org/articles/10.3389/fpsyg.2022.957323">비판</a>이 있어, 쏠림은 방향 지수와 분리해 검증해야 합니다.</p>
+  <h3>어떤 방법·도구를 쓰면 되는지: 지수</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>할 일</th><th>방법</th><th>도구</th></tr></thead>
+    <tbody>
+      <tr><td>비율 보정 (B1)</td><td>보정 집계(ACC), 확률형 보정 집계(PACC)</td><td><a href="https://www.github.com/HLT-ISTI/QuaPy">QuaPy</a>. 로지스틱 회귀를 감싸는 형태라 지금 모델에 바로 붙습니다</td></tr>
+      <tr><td>확률 보정 (A2)</td><td>시그모이드 또는 등위 보정</td><td>scikit-learn <code>CalibratedClassifierCV</code></td></tr>
+      <tr><td>글 적은 날 안정화 (B7)</td><td>종목의 평소 비율 쪽으로 당기는 베타-이항 추정</td><td>직접 구현 (몇 줄)</td></tr>
+      <tr><td>잔차 심리 (B4)</td><td>종목·날짜 고정효과 회귀의 잔차</td><td>linearmodels <code>PanelOLS</code></td></tr>
+      <tr><td>하위 지표 묶기 (B6)</td><td>첫 주성분, 또는 개인 수급을 설명하는 가중치 학습</td><td>scikit-learn <code>PCA</code>, 릿지 회귀</td></tr>
+      <tr><td>글 수 급증 판정</td><td>20일 중앙값과 중앙값 절대편차 기준의 강건한 표준점수</td><td>pandas</td></tr>
+      <tr><td>30분 지수 평활</td><td>지수가중 이동평균. 글이 아주 적은 종목은 상태공간 모형</td><td>pandas <code>ewm</code>, statsmodels <code>UnobservedComponents</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">5</span>분석 로직 보완</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>보완</th><th>왜</th><th>어떻게</th></tr></thead>
+    <tbody>
+      <tr><td>C1</td><td><b>“밤 글 → 시가 갭 +1.33%p”에 통제 추가</b></td><td>발표의 유일한 선행 결과입니다. <code>fe()</code>에 종목 고정효과만 있고 통제는 전일 수익률·전일 시장 수익률뿐이라, 밤사이 시장 전체 재료가 글과 시가를 함께 움직였을 가능성을 못 걸러냅니다.</td><td>① 날짜 고정효과 또는 당일 지수 갭(<code>m_open</code>) ② 밤사이 미국 지수 수익률 ③ 전일 15:30~20:00 시간외 수익률 ④ 대체거래소 출범 전 구간만 따로. 남는 효과가 종목 고유의 신호입니다.</td></tr>
+      <tr><td>C2</td><td><b>지수·국면의 이후 성과</b></td><td>발표 6장이 “극단적 공포는 매수 기회”라는 역발상 활용을 말하지만 검증이 없습니다.</td><td>지수 구간·국면별로 이후 1·5·20일 초과수익률, 변동폭, 개인 순매수를 표로 냅니다. 근거가 안 나오면 그 문장을 뺍니다.</td></tr>
+      <tr><td>C3</td><td><b>거래량·변동폭·공매도를 분석 대상으로</b></td><td>거래량 비율(<code>vr</code>)이 통제 변수로만 쓰입니다.</td><td>심리·글 수 → 다음 날 거래량 비율, 일중 변동폭((고가−저가)÷시가), 공매도 비중 회귀를 추가합니다.</td></tr>
+      <tr><td>C4</td><td><b>쏠림 → 거래량</b></td><td>의견이 갈릴수록 거래량이 늘어난다는 것이 <a href="https://ideas.repec.org/a/bla/jfinan/v75y2020i1p173-228.html">Cookson &amp; Niessner</a>의 결과입니다.</td><td>쏠림 지표와 거래량 비율이 이미 있어 회귀 한 줄이면 됩니다.</td></tr>
+      <tr><td>C5</td><td><b>예측 모델 비교</b></td><td>회귀 계수보다 “커뮤니티 변수가 예측에 더한 값”이 서비스의 근거가 됩니다.</td><td>시장 자료만 쓴 모델과 커뮤니티 변수를 더한 모델로 다음 날 개인 순매수·거래량·변동폭을 예측합니다. 날짜 순으로 학습과 예측을 반복하고 선형 모델과 트리 모델을 비교합니다. CPU로 됩니다.</td></tr>
+      <tr><td>C6</td><td><b>탐욕과 공포를 따로, 여러 날에 걸쳐</b></td><td>순값 하나와 하루 시차만 봅니다.</td><td>탐욕 비율과 공포 비율을 각각 넣고, 충격 이후 0~10일의 반응 경로를 그립니다.</td></tr>
+      <tr><td>C7</td><td><b>수급 결과 표현</b></td><td>개인·기관·외국인 순매수는 합이 0에 가까워 반대 방향이 일부 계산상 당연합니다(발표 21장도 언급).</td><td>“개인 대 기관+외국인” 한 축으로 정리하고, 계산해 둔 다음 날 수급 회귀(<code>flow_next_reg_*</code>)를 모두 제시합니다.</td></tr>
+      <tr><td>C8</td><td><b>급락일 45일</b></td><td>급락일이 몰려 있어 “직전 5일”에 다른 급락일이 섞입니다.</td><td>10거래일 안 첫 급락일만 쓰고, 무작위 날짜와 비교합니다.</td></tr>
+    </tbody>
+  </table></div>
+  <p>“글이 몰리면 개인이 산다”(발표 18~19장)는 <a href="https://ideas.repec.org/a/oup/rfinst/v21y2008i2p785-818.html">Barber &amp; Odean</a>의 관심 유발 매수와 같은 현상입니다. 인용하면 근거가 단단해집니다. 관심 지표로 검색량을 쓴 <a href="https://rady.ucsd.edu/faculty/directory/engelberg/pub/portfolios/GOOGLE.pdf">Da, Engelberg &amp; Gao</a>도 같은 계열입니다.</p>
+  <h3>어떤 모델·도구를 쓰면 되는지: 분석과 예측</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>할 일</th><th>모델</th><th>도구와 메모</th></tr></thead>
+    <tbody>
+      <tr><td>패널 회귀 (C1~C4, C6)</td><td>종목·날짜 이중 고정효과, 이중 군집 표준오차</td><td><a href="https://bashtage.github.io/linearmodels/panel/panel/linearmodels.panel.model.PanelOLS.html">linearmodels PanelOLS</a>. <code>entity_effects</code>, <code>time_effects</code> 옵션으로 날짜 고정효과가 한 줄입니다. 지금처럼 종목 더미를 식에 넣는 것보다 간단합니다</td></tr>
+      <tr><td>다음 날 개인 순매수·거래량·변동폭 예측 (C5)</td><td>기준선: 릿지·엘라스틱넷. 주 모델: 그래디언트 부스팅</td><td>LightGBM 또는 scikit-learn <code>HistGradientBoostingRegressor</code>. <span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>예상 범위 (수급 예보 카드)</td><td>분위 회귀로 10%·50%·90% 값을 각각 예측</td><td><a href="https://lightgbm.readthedocs.io/en/stable/Parameters.html">LightGBM</a>의 <code>objective='quantile'</code>. 분위마다 모델을 따로 학습합니다</td></tr>
+      <tr><td>방향 예측 (시가가 오를지 내릴지)</td><td>로지스틱 회귀, 부스팅 분류기</td><td>정확도 대신 Brier 점수로 확률의 질을 평가합니다</td></tr>
+      <tr><td>평가</td><td>날짜 순으로 학습 구간을 늘려 가며 예측, 시장 자료만 쓴 모델과 비교</td><td>두 모델의 일별 오차 차이를 Diebold–Mariano 검정으로 확인합니다</td></tr>
+      <tr><td>반응 경로 (C6)</td><td>시차 0~10일마다 같은 회귀를 반복(local projection)</td><td>PanelOLS 반복 실행</td></tr>
+      <tr><td>변수 기여 확인</td><td>부스팅 모델의 변수별 기여 분해</td><td>SHAP</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">예측 모델의 입력 후보: 심리 지수, 잔차 심리, 탐욕·공포 비율, 글 수 배수, 쏠림, 야간 심리, 매수 인증 비율, 전일 수익률·거래량 비율·변동폭, 시장 수익률, 전일 개인·기관·외국인 순매수.</p>
+</section>
+
+<section id="s6">
+  <h2><span class="n">6</span>발표 문구에서 고칠 곳</h2>
+  <ul>
+    <li><b>14장 “전부 LLM이면 약 61일”:</b> 한 줄로 처리할 때의 시간이고, 같은 장의 비용 추정은 약 $195입니다. “새 글마다 비용이 든다, 재현이 쉽다, 우리가 쓸 수 있는 건 에이전트 판정뿐이다”로 근거를 바꾸는 편이 안전합니다.</li>
+    <li><b>13장 “감성 = 방향 의견”:</b> 실제 기준(<code>label_guide.md</code>)은 분노·물린 한탄을 공포로, 못 산 아쉬움을 탐욕으로 칩니다. 감정과 방향이 섞여 있으니 설명을 기준에 맞추거나 A8로 나눠 판정합니다.</li>
+    <li><b>15~16장:</b> “판정 못 한 글은 중립”과 “정확도 85%”가 함께 나오면 85%가 전체 글에 대한 값으로 읽힙니다. 판정한 26% 안에서의 값임을 같은 줄에 적습니다.</li>
+    <li><b>22~24장 분기 섹터 표:</b> 같은 분기 안의 기록이고 9개 분기뿐이라 묘사로만 씁니다.</li>
+    <li><b>33장 한계:</b> 수집 허용 여부(이용약관)가 빠져 있습니다.</li>
+  </ul>
+</section>
+
+<section id="s7">
+  <h2><span class="n">7</span>결론 확장: 개인 투자자 행동 계측기</h2>
+  <p class="lead">제안하는 결론 문장: “커뮤니티 심리는 주가를 예측하지 못한다. 대신 개인 투자자가 지금 무엇을 느끼고 내일 어떻게 움직일지를 보여준다.”</p>
+  <p>발표에서 가장 강한 증거는 가격이 아니라 수급에 있습니다. 글이 2배 몰리면 다음 날 개인 순매수 +0.6%p(t = 3.2), 글이 몰린 하락일의 개인 순매수 +18.7%(평소 +9.2%), 가장 탐욕인 날 개인 −7.5%·기관 +4.3%입니다.</p>
+
+  <h3>모델 요소: 출력 네 가지</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>출력</th><th>내용</th><th>필요한 보완</th></tr></thead>
+    <tbody>
+      <tr><td>심리 상태</td><td>공포–탐욕 지수와 잔차 심리</td><td>A1~A3, B1, B4</td></tr>
+      <tr><td>관심 과열</td><td>글 수의 평소 대비 배수</td><td>B2 (이미 계산 중)</td></tr>
+      <tr><td>말·행동 괴리</td><td>글의 심리와 인증 매수·매도, 실제 개인 수급의 차이</td><td>B5</td></tr>
+      <tr><td>개인 수급 예보</td><td>내일 개인 순매수의 예상 범위</td><td>C5</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>로직 요소: 알림 규칙</h3>
+  <ul>
+    <li>하락일에 글이 평소의 2배 이상 → “개인 매수 집중 구간”</li>
+    <li>지수가 탐욕(75 이상)인데 개인이 순매도 → “말과 행동이 다름”</li>
+    <li>밤사이 심리가 하위 15% → “약세 출발 가능성”. 시가까지만 유효하다는 문구를 고정합니다.</li>
+    <li>모든 알림에 과거 기록을 붙입니다. 예측이 아니라 기록임을 드러내기 위해서입니다.</li>
+    <li>글 수가 적은 종목·시간대는 판정하지 않고 회색으로 둡니다. 갱신은 30분 단위입니다.</li>
+  </ul>
+
+  <h3>UI 요소: 동작하는 목업</h3>
+  <p>아래는 실제로 눌러볼 수 있는 화면입니다. 섹터를 누르면 종목이 나오고, 종목을 누르면 상세로 넘어갑니다. 차트에 마우스를 올리면 그날 값이 보입니다.</p>
+
+  <div class="app" id="app">
+    <div class="app-bar">
+      <div><span class="brand">커뮤니티 심리 계측기</span> <span class="asof" id="asof"></span></div>
+      <div class="tabs" id="tabs">
+        <button data-v="home" class="on">시장 홈</button>
+        <button data-v="stock">종목 상세</button>
+        <button data-v="brief">장전 브리핑</button>
+      </div>
+    </div>
+    <div class="sample">예시 데이터로 동작하는 목업입니다. 종목·섹터 목록은 실제(sectors.json)이고, 수치는 발표의 관계를 흉내 낸 가짜 값입니다. 실제 집계 파일을 받으면 바꿔 끼울 수 있습니다.</div>
+
+    <div class="view on" id="v-home">
+      <div class="grid2">
+        <div>
+          <div class="panel">
+            <h4>시장 심리 (45종목, 글 수 가중)</h4>
+            <div id="gauge"></div>
+            <div class="gauge-val" id="gval"></div>
+            <div class="gauge-zone" id="gzone"></div>
+            <p class="small" style="text-align:center;margin:6px 0 0" id="gsub"></p>
+          </div>
+          <div class="panel" style="margin-top:12px">
+            <h4>오늘의 신호</h4>
+            <div id="signals"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h4>섹터 지도</h4>
+          <div class="legend"><span>공포</span><span class="grad"></span><span>탐욕</span><span style="margin-left:auto">아래 막대 = 글 비중</span></div>
+          <div class="tiles" id="tiles"></div>
+          <div id="secbox" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="v-stock">
+      <div class="row">
+        <select id="sel" aria-label="종목 선택"></select>
+        <div class="seg" id="range"><button data-r="60" class="on">60일</button><button data-r="120">120일</button></div>
+        <span class="small" id="sdesc"></span>
+      </div>
+      <div class="kpis" id="kpis"></div>
+      <div class="chartbox" id="chartbox"><div class="tip" id="tip"></div><div id="chart"></div></div>
+      <div class="below">
+        <div class="panel">
+          <h4>이런 날 과거에는</h4>
+          <div id="analog"></div>
+        </div>
+        <div class="panel">
+          <h4>이 종목의 신호</h4>
+          <div id="ssig"></div>
+          <h4 style="margin-top:12px">오늘 많이 나온 말 (예시)</h4>
+          <div id="words" class="stocks"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="v-brief">
+      <p style="margin-top:0"><b>08:30 기준 밤사이 심리.</b> 전일 20:00부터 당일 09:00 전까지의 글입니다. <span style="color:var(--warn);font-weight:600">이 목록은 시가까지만 설명합니다. 09:00 이후 장중 수익률과는 관계가 확인되지 않았습니다.</span></p>
+      <div class="below" style="margin-top:0">
+        <div class="panel"><h4>밤사이 공포가 큰 종목</h4><div id="bfear"></div></div>
+        <div class="panel"><h4>밤사이 탐욕이 큰 종목</h4><div id="bgreed"></div></div>
+      </div>
+      <div class="panel" style="margin-top:12px"><h4>과거 기록 (예시 데이터 기준)</h4><div id="bhist"></div></div>
+    </div>
+  </div>
+
+  <h3>화면 설계 의도</h3>
+  <ul>
+    <li><b>세 줄을 한 시간축에:</b> 주가, 심리 지수, 글 수를 같은 축에 놓아 “주가가 먼저, 글이 뒤따름”이 눈에 보이게 했습니다.</li>
+    <li><b>“이런 날 과거에는” 카드:</b> 숫자 하나 대신 사례 수와 분포를 보여줍니다. 매매 신호로 읽히지 않게 하려는 장치입니다.</li>
+    <li><b>원문 대신 단어:</b> 원문을 저장하지 않는 원칙에 맞춰 그날의 대표 단어만 보여줍니다. <code>rotation_keywords.py</code>를 일 단위로 돌리면 됩니다.</li>
+    <li><b>투명성:</b> 지수 옆에 글 수와 판정 비율을 항상 표시하고, 글이 적으면 지수를 내지 않습니다.</li>
+  </ul>
+</section>
+
+<section id="s8">
+  <h2><span class="n">8</span>류창민 님께 요청드릴 것</h2>
+  <h3>가. 원문이 없어 바로 공유할 수 있는 것</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>파일</th><th>쓰임</th></tr></thead>
+    <tbody>
+      <tr><td><code>krx_results.json</code>, <code>pres_results.json</code>, <code>rotation_results.json</code></td><td>발표 수치 확인</td></tr>
+      <tr><td><code>apply_out2/</code> (종목·30분 집계), <code>index_out/</code></td><td>4장 B2~B4·B6·B7, 5장 C1~C8, 목업에 실제 값 연결</td></tr>
+      <tr><td><code>ohlcv.json</code>, <code>krx_index.json</code>, <code>krx_investor.json</code>, <code>krx_short.json</code>, <code>trading_days.csv</code></td><td>5장 전체. 투자자별 수급은 KRX 로그인이 필요해 제가 새로 받기 어렵습니다</td></tr>
+      <tr><td><code>lexicon_all29k.json</code>, <code>rotation_keywords.json</code></td><td>키워드 강도, 대표 단어 화면</td></tr>
+      <tr><td><code>lr_trial.py</code>, <code>lr_prevyear.py</code>, <code>score_heldout.py</code> 실행 출력</td><td>기준점별 판정 비율·정확도 확인</td></tr>
+    </tbody>
+  </table></div>
+  <h3>나. 원문이 들어 있어 비공개로 받아야 하는 것</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>파일</th><th>쓰임</th></tr></thead>
+    <tbody>
+      <tr><td><code>sample_30k_clean.json</code>, <code>sample_prev12_clean.json</code>, <code>labels/</code></td><td>3장 A2~A5 재학습, A6~A8 추가 판정</td></tr>
+      <tr><td><code>model.joblib</code></td><td>기존 모델과 비교</td></tr>
+      <tr><td><code>data/posts/</code> 원문 전체</td><td>A1·A4·B5 재적용. 용량이 크면 수정한 <code>apply_all2.py</code>를 류창민 님 PC에서 돌려 주셔도 됩니다(기존 17분)</td></tr>
+    </tbody>
+  </table></div>
+  <h3>다. 확인하고 싶은 것</h3>
+  <ol>
+    <li>수집 시 작성자 식별자(익명 해시)와 좋아요 수를 함께 받을 수 있는지 (B8)</li>
+    <li>인증·보유 필드가 전체 글 중 몇 %에 채워져 있는지 (B5)</li>
+    <li>대체거래소 시간외 가격이나 분봉을 구할 수 있는지 (C1)</li>
+    <li>Haiku 판정 때 쓴 설정(모델 버전, 묶음당 소요 시간)과 같은 묶음을 다시 판정해 본 적이 있는지 (A7)</li>
+    <li>수집의 이용약관 검토 여부와, 발표·보고서에서 이를 어떻게 설명할 계획인지</li>
+    <li>최종 발표·제출 일정. 9장의 순서를 일정에 맞춰 줄이겠습니다</li>
+    <li>작업 방식. 저는 레포 쓰기 권한이 없어, 권한을 받거나 fork에서 PR을 보내는 방식 중 편한 쪽을 알려주세요</li>
+  </ol>
+</section>
+
+<section id="s9">
+  <h2><span class="n">9</span>제안하는 진행 순서</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>단계</th><th>할 일</th><th>필요한 것</th></tr></thead>
+    <tbody>
+      <tr><td>1단계</td><td>C1(시가 갭 통제), C2(지수 이후 성과), C3·C4(거래량·변동폭·쏠림), B2~B4(관심도 통일, 백분위 창, 잔차 심리)</td><td>8장 “가” 파일만. <span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>2단계</td><td>A1~A5 재학습과 재적용, B1(보정 집계), B5(행동 축), C5(예측 모델 비교)</td><td>8장 “나” 파일 또는 재적용 실행. <span class="tag cpu">GPU 불필요</span></td></tr>
+      <tr><td>3단계</td><td>A6~A8 추가 판정, 목업에 실제 값 연결</td><td><span class="tag cc">Claude Code</span></td></tr>
+      <tr><td>선택</td><td>A9 한국어 사전학습 모델. 3장의 모델 표 5번을 1번과 같은 채점 묶음으로 비교</td><td><span class="tag gpu">GPU 필요</span> RTX 3080 또는 무료 GPU 노트북</td></tr>
+    </tbody>
+  </table></div>
+  <p>발표 일정이 가까우면 1단계의 C1과 C2, 그리고 6장의 문구 수정만으로도 발표의 약한 고리는 대부분 막을 수 있습니다.</p>
+</section>
+
+<section id="s10">
+  <h2><span class="n">10</span>구현 현황</h2>
+  <p class="lead">GPU 없이 할 수 있는 보완은 코드로 구현해 두었습니다. 위치는 레포 <code>dongwooki/dongwooki</code>의 <code>소셜미디어분석_6조/toss_fear_greed_v2/</code>입니다. 기존 코드·파일은 고치지 않고, 기존 폴더를 입력으로 읽어 옆에 결과를 씁니다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>파일</th><th>구현한 항목</th><th>상태</th></tr></thead>
+    <tbody>
+      <tr><td><code>train_v2.py</code>, <code>featurize_v2.py</code></td><td>A1~A5, 3장 모델 표 1·2번 (기존 모델과 v2 후보 4개를 같은 채점 묶음으로 비교)</td><td>구현·합성 검증</td></tr>
+      <tr><td><code>apply_v2.py</code></td><td>A1(확률 합), A4(부모 글·인증·보유), B5(행동 열)</td><td>구현·합성 검증</td></tr>
+      <tr><td><code>build_index_v2.py</code></td><td>B1~B7 (보정 집계, 관심도 통일, 60일 백분위, 잔차 심리, 행동 축, 0~100 지수·국면). 기존 S·20일 백분위도 같은 표에</td><td>구현·합성 검증</td></tr>
+      <tr><td><code>analysis_v2.py</code></td><td>C1~C4, C6~C8, 말과 행동</td><td>구현·합성 검증</td></tr>
+      <tr><td><code>predict_v2.py</code></td><td>C5, 수급 예보의 예상 범위</td><td>구현·합성 검증</td></tr>
+      <tr><td><code>make_active_batch.py</code>, <code>label_agreement.py</code>, <code>batch_task_active.md</code></td><td>A6, A7 (Claude Code 판정용 묶음과 일치도)</td><td>구현·합성 검증. 실제 판정은 데이터를 받은 뒤</td></tr>
+      <tr><td><code>ui/dashboard.html</code>, <code>build_ui_data.py</code></td><td>7장 UI를 실제 결과 파일을 읽는 대시보드로</td><td>구현. 지금은 합성 데이터 표시</td></tr>
+      <tr><td>—</td><td>A8(여러 축 라벨), A9(한국어 사전학습 모델)</td><td>미구현. A8은 판정 데이터, A9는 GPU 필요</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><b>11/25 업데이트:</b> 류창민 님이 커밋 1a91b88·28ba19f·64f15aa에서 C1(날짜 고정효과·지수 갭·08시 전·출범 전 구간), C2~C8, B2·B3·B4·B6·B7, 6장 문구 수정을 직접 반영했습니다. 남은 보완은 3장 모델(A1~A9), B1 보정 집계, B5 행동 축, C1의 시간외·미국 증시 통제, 수급 예상 범위, 7장 UI입니다. v2 코드도 새 글 입력 형식(김정기 수집기 CSV)에 맞췄습니다.</div>
+  <h3>합성 데이터로 확인한 것</h3>
+  <p>실제 데이터와 같은 형식의 합성 데이터(15종목, 327거래일, 글 27만 건)를 만들어 전체를 돌렸습니다. 약 2분 30초가 걸렸습니다. 합성 문장은 실제 글보다 쉬우므로 아래 수치는 코드가 의도대로 움직인다는 확인일 뿐입니다.</p>
+  <ul>
+    <li><b>분류:</b> 기존 모델 대비 v2의 3분류 정확도 84% → 93%. 대댓글 정확도 53% → 91%로, 부모 글을 넣은 효과가 가장 컸습니다.</li>
+    <li><b>C1 통제 효과:</b> 밤 글이 미국 증시·전일 시간외 가격을 반영하도록 심어 두었더니, 기존 사양에서 밤 심리 1σ당 시가 갭 +0.35%p였던 계수가 날짜 고정효과와 시간외 수익률을 통제하자 +0.11%p로 줄었습니다. 대체거래소 출범 전 구간만 따로 봐도 +0.11%p였습니다. 실제 데이터에서 같은 표를 보면 +1.33%p 중 종목 고유의 신호가 얼마인지 알 수 있습니다.</li>
+    <li><b>수급:</b> 글 수가 다음 날 개인 순매수를 설명하는 관계(t = 6.2), 인증 매수 비율과 심리의 역관계(상관 −0.59)를 다시 찾아냈습니다.</li>
+  </ul>
+  <p>실제 데이터로 돌리려면 8장 “가”의 파일만 있으면 3단계(지수)부터, “나”까지 있으면 처음부터 실행됩니다. C1의 미국 증시·시간외 통제에는 <code>us_overnight.csv</code>, <code>nxt_after.json</code>이 새로 필요합니다(8장 다-3).</p>
+</section>
+
+<section id="s11">
+  <h2><span class="n">11</span>출처</h2>
+  <ul>
+    <li>Antweiler &amp; Frank (2004), <a href="https://wernerantweiler.ca/public/noise-a.pdf">Is All That Talk Just Noise? The Information Content of Internet Stock Message Boards</a>, Journal of Finance. 게시판 글로 강세 지수와 일치 지수를 만든 연구.</li>
+    <li>Liu, Zhou &amp; Zhao (2022), <a href="https://www.frontiersin.org/articles/10.3389/fpsyg.2022.957323">강세 지수와 일치 지수의 기계적 상관 비판</a>, Frontiers in Psychology.</li>
+    <li>Moreo &amp; Sebastiani, <a href="https://ar5iv.labs.arxiv.org/html/2011.02552">Re-Assessing the “Classify and Count” Quantification Method</a>. 분류 결과를 그대로 세는 방식의 편향.</li>
+    <li><a href="https://arxiv.org/pdf/2011.08091">Tweet Sentiment Quantification: An Experimental Re-Evaluation</a>. 보정 집계가 분포 변화에 안정적이라는 실험.</li>
+    <li>Cookson &amp; Niessner (2020), <a href="https://ideas.repec.org/a/bla/jfinan/v75y2020i1p173-228.html">Why Don't We Agree? Evidence from a Social Network of Investors</a>, Journal of Finance. 의견 불일치와 거래량.</li>
+    <li>Barber &amp; Odean (2008), <a href="https://ideas.repec.org/a/oup/rfinst/v21y2008i2p785-818.html">All That Glitters</a>, Review of Financial Studies. 개인 투자자의 관심 유발 매수.</li>
+    <li>Da, Engelberg &amp; Gao (2011), <a href="https://rady.ucsd.edu/faculty/directory/engelberg/pub/portfolios/GOOGLE.pdf">In Search of Attention</a>, Journal of Finance. 검색량으로 잰 개인 투자자 관심.</li>
+    <li><a href="https://arxiv.org/html/2411.08028v3">Learning with Less: Knowledge Distillation from Large Language Models via Unlabeled Data</a> (LLKD). 교사 LLM 판정으로 작은 모델을 학습시키는 방법과 표본 고르기.</li>
+    <li><a href="https://huggingface.co/beomi/KcELECTRA-base">KcELECTRA-base 모델 카드</a>. 댓글 말투로 학습된 한국어 ELECTRA.</li>
+    <li><a href="https://huggingface.co/snunlp/KR-FinBert-SC">KR-FinBert-SC 모델 카드</a>. 경제 뉴스·애널리스트 리포트로 학습된 한국어 금융 감성 모델.</li>
+    <li><a href="https://huggingface.co/monologg/koelectra-small-v3-discriminator">KoELECTRA-small-v3</a>, <a href="https://huggingface.co/klue/roberta-base">klue/roberta-base</a> 모델 페이지. 비교 후보 모델.</li>
+    <li><a href="https://www.github.com/HLT-ISTI/QuaPy">QuaPy</a>. 보정 집계(ACC, PACC)를 구현한 파이썬 라이브러리.</li>
+    <li><a href="https://bashtage.github.io/linearmodels/panel/panel/linearmodels.panel.model.PanelOLS.html">linearmodels PanelOLS 문서</a>. 이중 고정효과와 이중 군집 표준오차.</li>
+    <li><a href="https://lightgbm.readthedocs.io/en/stable/Parameters.html">LightGBM 매개변수 문서</a>. 분위 회귀 목적함수.</li>
+    <li>검토한 자료: 레포 <code>devCollegit/social_media_2026</code>의 <code>류창민/toss_fear_greed/</code>(커밋 3e5e57b), 발표자료 「토스증권 커뮤니티 공포탐욕지수」 34장.</li>
+  </ul>
+  <p class="small">논문 내용은 초록과 공개 요약을 기준으로 인용했습니다. 본문 전체를 대조하지는 않았습니다.</p>
+</section>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+var SECTORS={"반도체":{"005930":"삼성전자","000660":"SK하이닉스","402340":"SK스퀘어"},"반도체 소재":{"093370":"후성","011790":"SKC","005290":"동진쎄미켐"},"반도체 부품":{"007660":"이수페타시스","058470":"리노공업","222800":"심텍"},"반도체 장비":{"042700":"한미반도체","036930":"주성엔지니어링","403870":"HPSP"},"전자부품":{"009150":"삼성전기","011070":"LG이노텍","001820":"삼화콘덴서"},"2차전지":{"006400":"삼성SDI","086520":"에코프로","373220":"LG에너지솔루션"},"자동차":{"005380":"현대차","000270":"기아","012330":"현대모비스"},"조선":{"042660":"한화오션","010140":"삼성중공업","329180":"HD현대중공업"},"방산":{"272210":"한화시스템","012450":"한화에어로스페이스","064350":"현대로템"},"원전":{"034020":"두산에너빌리티","032820":"우리기술","052690":"한전기술"},"전력기기":{"010120":"LS ELECTRIC","298040":"효성중공업","267260":"HD현대일렉트릭"},"인터넷·IT서비스":{"035420":"NAVER","064400":"LG씨엔에스","035720":"카카오"},"바이오":{"196170":"알테오젠","000250":"삼천당제약","028300":"HLB"},"건설":{"047040":"대우건설","000720":"현대건설","006360":"GS건설"},"로봇":{"454910":"두산로보틱스","277810":"레인보우로보틱스","108490":"로보티즈"}};
+var WORDS={"반도체":["실적","수출","HBM"],"반도체 소재":["증설","단가","공급"],"반도체 부품":["블록","파업","노조"],"반도체 장비":["수주","장비","납품"],"전자부품":["애플","환율","부품"],"2차전지":["배터리","공매도","신주"],"자동차":["배당","로봇","관세"],"조선":["수주","선가","환율"],"방산":["수출","계약","전쟁"],"원전":["체코","해체","수주"],"전력기기":["변압기","구리","증설"],"인터넷·IT서비스":["AI","광고","자사주"],"바이오":["승인","임상","공매도"],"건설":["수주","원전","안전"],"로봇":["로봇","상장","전쟁"]};
+
+/* ---------- 예시 데이터 생성 (고정 난수) ---------- */
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+var R=mulberry(20261124);
+function gs(){var u=0,v=0;while(u===0)u=R();while(v===0)v=R();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function clamp(x,a,b){return Math.max(a,Math.min(b,x));}
+var T=140, dates=[];
+(function(){var d=new Date(Date.UTC(2026,10,11));while(dates.length<T){var w=d.getUTCDay();if(w!==0&&w!==6)dates.unshift(d.toISOString().slice(0,10));d=new Date(d.getTime()-864e5);}})();
+var LAST=T-1, WIN=60;
+var mkt=[],i,t;for(t=0;t<T;t++)mkt.push(gs()*1.0);
+var stocks=[],secNames=Object.keys(SECTORS);
+secNames.forEach(function(sec){
+  var sf=[];for(t=0;t<T;t++)sf.push(gs()*0.9);
+  Object.keys(SECTORS[sec]).forEach(function(code){
+    var name=SECTORS[sec][code];
+    var base=Math.exp(3.6+R()*3.6); if(code==="005930"||code==="000660")base=5200+R()*2500;
+    var s={code:code,name:name,sector:sec,ret:[],gap:[],price:[],posts:[],G:[],F:[],S:[],idx:[],ratio:[],priv:[],buy:[],nnet:[],nposts:[],nidx:[]};
+    var p=40+R()*260, net=[];
+    for(t=0;t<T;t++){
+      var nz=gs();
+      var gap=0.85*nz+0.3*mkt[t];
+      var intra=0.7*mkt[t]+sf[t]+gs()*1.5;
+      var ret=gap+intra; if(t===0)ret=0;
+      p=p*(1+ret/100);
+      var spike=R()<0.04?(2+R()*2.5):1;
+      var posts=Math.max(3,Math.round(base*Math.exp(0.3*Math.abs(ret)+0.25*gs())*spike));
+      var nt=clamp(0.2*ret+0.07*(t?s.ret[t-1]:0)+0.22*gs(),-0.9,0.9);
+      var cls=posts*0.26, G=cls*(0.5+0.5*nt), F=cls-G;
+      s.ret.push(ret);s.gap.push(gap);s.price.push(p);s.posts.push(posts);s.G.push(G);s.F.push(F);
+      s.S.push((G-F)/(posts+10));net.push(nt);
+      s.nnet.push(clamp(0.12*nz+0.03*(t?s.ret[t-1]:0)+0.3*gs(),-0.9,0.9));
+      s.nposts.push(Math.round(posts*0.24));
+      s.buy.push(clamp(0.5-0.18*nt+0.06*gs(),0.1,0.9));
+    }
+    for(t=0;t<T;t++){
+      var a=0,n=0,k;for(k=Math.max(0,t-20);k<t;k++){a+=s.posts[k];n++;}
+      s.ratio.push(n?s.posts[t]/(a/n):1);
+    }
+    for(t=0;t<T;t++){
+      var lr=Math.log(Math.max(s.ratio[t],0.3))/Math.LN2, lr1=t?Math.log(Math.max(s.ratio[t-1],0.3))/Math.LN2:0;
+      s.priv.push(-1.9*s.ret[t]+2.8*lr+0.9*lr1+gs()*2.2);
+      s.idx.push(pct(s.S,t));s.nidx.push(pct(s.nnet,t));
+    }
+    stocks.push(s);
+  });
+});
+function pct(arr,t){var lo=Math.max(0,t-WIN+1),n=0,b=0,e=0,k;for(k=lo;k<=t;k++){n++;if(arr[k]<arr[t])b++;else if(arr[k]===arr[t])e++;}return n<2?50:(b+0.5*(e-1))/(n-1)*100;}
+var byCode={};stocks.forEach(function(s){byCode[s.code]=s;});
+
+/* ---------- 공통 ---------- */
+function zone(v){return v<25?"극단적 공포":v<45?"공포":v<=55?"중립":v<75?"탐욕":"극단적 탐욕";}
+function mix(a,b,x){return Math.round(a+(b-a)*x);}
+function color(v){var x=clamp(v,0,100),c;if(x<50){x=x/50;c=[mix(47,233,x),mix(95,236,x),mix(208,241,x)];}else{x=(x-50)/50;c=[mix(233,214,x),mix(236,69,x),mix(241,69,x)];}return "rgb("+c.join(",")+")";}
+function ink(v){return (v<22||v>78)?"#fff":"#1c2230";}
+function f1(x){return (x>=0?"+":"")+x.toFixed(1);}
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+/* ---------- 알림 규칙 ---------- */
+function alerts(s,t){
+  var out=[];
+  if(s.ret[t]<0&&s.ratio[t]>=2)out.push({k:"buy",cls:"buy",title:"개인 매수 집중 구간",why:"주가 "+f1(s.ret[t])+"%, 글 수 평소의 "+s.ratio[t].toFixed(1)+"배",cond:function(x,u){return x.ret[u]<0&&x.ratio[u]>=2;},stat:"다음 날 개인 순매수"});
+  if(s.idx[t]>=75&&s.priv[t]<0)out.push({k:"gapw",cls:"gap",title:"말과 행동이 다름",why:"심리 지수 "+Math.round(s.idx[t])+"(탐욕)인데 개인은 순매도 "+f1(s.priv[t])+"%",cond:function(x,u){return x.idx[u]>=75&&x.priv[u]<0;},stat:"다음 날 개인 순매수"});
+  if(s.nidx[t]<=15&&s.nposts[t]>=5)out.push({k:"open",cls:"fear",title:"약세 출발 가능성 (시가까지만)",why:"밤사이 심리 하위 "+Math.round(s.nidx[t])+"%, 밤 글 "+s.nposts[t]+"건",open:true});
+  if(s.ratio[t]>=3)out.push({k:"heat",cls:"heat",title:"관심 과열",why:"글 수 평소의 "+s.ratio[t].toFixed(1)+"배",cond:function(x,u){return x.ratio[u]>=3;},stat:"다음 날 개인 순매수"});
+  out.forEach(function(a){a.hist=history(a);});
+  return out;
+}
+function history(a){
+  var n=0,pos=0,sum=0;
+  stocks.forEach(function(x){for(var u=WIN;u<LAST;u++){
+    if(a.open){if(x.nidx[u]<=15&&x.nposts[u]>=5){n++;if(x.gap[u]<0)pos++;}}
+    else if(a.cond(x,u)){n++;sum+=x.priv[u+1];if(x.priv[u+1]>0)pos++;}
+  }});
+  if(!n)return "과거 사례 없음";
+  return a.open?("과거 "+n+"번 중 "+pos+"번 하락 출발 ("+Math.round(pos/n*100)+"%)"):("과거 "+n+"번 중 "+pos+"번 다음 날 개인 순매수 (평균 "+f1(sum/n)+"%)");
+}
+function sigHtml(a,s){return '<div class="sig '+a.cls+'"><b>'+(s?'<a data-go="'+s.code+'">'+esc(s.name)+'</a> · ':'')+esc(a.title)+'</b>'+esc(a.why)+'<div class="hist">'+esc(a.hist)+'</div></div>';}
+
+/* ---------- 시장 홈 ---------- */
+function drawGauge(v){
+  var cx=130,cy=120,r=95,seg=[[0,25],[25,45],[45,55],[55,75],[75,100]],cols=[color(8),color(32),color(50),color(68),color(92)],h="";
+  function pt(val,rad){var a=Math.PI*(1-val/100);return [cx+rad*Math.cos(a),cy-rad*Math.sin(a)];}
+  seg.forEach(function(sg,i){var a=pt(sg[0],r),b=pt(sg[1],r);h+='<path d="M'+a[0].toFixed(1)+' '+a[1].toFixed(1)+' A'+r+' '+r+' 0 0 1 '+b[0].toFixed(1)+' '+b[1].toFixed(1)+'" fill="none" stroke="'+cols[i]+'" stroke-width="18"/>';});
+  var n=pt(v,r-22);
+  h+='<line x1="'+cx+'" y1="'+cy+'" x2="'+n[0].toFixed(1)+'" y2="'+n[1].toFixed(1)+'" stroke="#141a26" stroke-width="4" stroke-linecap="round"/><circle cx="'+cx+'" cy="'+cy+'" r="7" fill="#141a26"/>';
+  h+='<text x="22" y="138" font-size="11" fill="#5d6676">0 공포</text><text x="238" y="138" font-size="11" fill="#5d6676" text-anchor="end">탐욕 100</text>';
+  $("gauge").innerHTML='<svg viewBox="0 0 260 144" role="img" aria-label="시장 심리 게이지 '+Math.round(v)+'" style="display:block;width:100%;max-width:260px;margin:0 auto">'+h+'</svg>';
+}
+function wavg(list,t){var a=0,w=0;list.forEach(function(s){a+=s.idx[t]*s.posts[t];w+=s.posts[t];});return a/w;}
+var selSec=null;
+function renderHome(){
+  var m=wavg(stocks,LAST),y=wavg(stocks,LAST-1),tot=0;stocks.forEach(function(s){tot+=s.posts[LAST];});
+  drawGauge(m);$("gval").textContent=Math.round(m);$("gval").style.color=m<45?"var(--fear)":m>55?"var(--greed)":"var(--ink)";
+  $("gzone").textContent=zone(m);$("gsub").textContent="전일 "+Math.round(y)+" → 오늘 "+Math.round(m)+" · 글 "+tot.toLocaleString()+"건 · 판정 비율 26%";
+  var all=[];stocks.forEach(function(s){alerts(s,LAST).forEach(function(a){all.push([a,s]);});});
+  var order={buy:0,gapw:1,open:2,heat:3};all.sort(function(p,q){return order[p[0].k]-order[q[0].k]||q[1].ratio[LAST]-p[1].ratio[LAST];});
+  $("signals").innerHTML=all.length?all.slice(0,5).map(function(p){return sigHtml(p[0],p[1]);}).join("")+(all.length>5?'<p class="small" style="margin:4px 0 0">외 '+(all.length-5)+'건</p>':''):'<p class="small">오늘은 신호가 없습니다.</p>';
+  var h="";secNames.forEach(function(sec){
+    var list=stocks.filter(function(s){return s.sector===sec;}),v=wavg(list,LAST),n=0;list.forEach(function(s){n+=s.posts[LAST];});
+    var sh=n/tot*100;
+    h+='<div class="tile'+(sec===selSec?' on':'')+'" data-sec="'+esc(sec)+'" tabindex="0" role="button" style="background:'+color(v)+';color:'+ink(v)+'"><div class="nm">'+esc(sec)+'</div><div class="ix">'+Math.round(v)+'</div><div class="sh">'+zone(v)+' · 글 '+sh.toFixed(0)+'%</div><div class="bar"><i style="width:'+clamp(sh*2.2,3,100)+'%"></i></div></div>';
+  });
+  $("tiles").innerHTML=h;renderSec();
+}
+function renderSec(){
+  if(!selSec){$("secbox").innerHTML='<p class="small">섹터를 누르면 종목이 나옵니다.</p>';return;}
+  var list=stocks.filter(function(s){return s.sector===selSec;});
+  $("secbox").innerHTML='<b>'+esc(selSec)+'</b><div class="stocks">'+list.map(function(s){return '<button data-go="'+s.code+'"><span class="pill" style="background:'+color(s.idx[LAST])+';color:'+ink(s.idx[LAST])+'">'+Math.round(s.idx[LAST])+'</span> '+esc(s.name)+' · 글 '+s.ratio[LAST].toFixed(1)+'배</button>';}).join("")+'</div>';
+}
+
+/* ---------- 종목 상세 ---------- */
+var cur=stocks[0].code,rangeN=60;
+function renderStock(){
+  var s=byCode[cur],t=LAST;
+  $("sdesc").textContent=s.sector+" · "+dates[t]+" 기준";
+  var k=[["심리 지수",Math.round(s.idx[t]),zone(s.idx[t]),color(s.idx[t])],["글 수",s.posts[t].toLocaleString()+"건","평소의 "+s.ratio[t].toFixed(1)+"배"],["오늘 주가",f1(s.ret[t])+"%","시가 갭 "+f1(s.gap[t])+"%"],["인증 매수 비율",Math.round(s.buy[t]*100)+"%","매도 인증 "+Math.round((1-s.buy[t])*100)+"%"],["개인 순매수",f1(s.priv[t])+"%","거래대금 대비"]];
+  $("kpis").innerHTML=k.map(function(x){return '<div class="kpi"><div class="l">'+x[0]+'</div><div class="v"'+(x[3]?' style="color:'+(s.idx[t]<45?"var(--fear)":s.idx[t]>55?"var(--greed)":"var(--ink)")+'"':'')+'>'+x[1]+'</div><div class="s">'+x[2]+'</div></div>';}).join("");
+  drawChart(s);
+  var al=alerts(s,t);$("ssig").innerHTML=al.length?al.map(function(a){return sigHtml(a,null);}).join(""):'<p class="small">오늘은 신호가 없습니다.</p>';
+  $("words").innerHTML=(WORDS[s.sector]||[]).map(function(w){return '<span class="chip">'+esc(w)+'</span>';}).join("");
+  renderAnalog(s);
+}
+function drawChart(s){
+  var W=900,L=52,Rr=14,pw=W-L-Rr,n=rangeN,st=T-n,H1=150,H2=96,H3=72,g=16,y1=18,y2=y1+H1+g+8,y3=y2+H2+g+8,H=y3+H3+26;
+  var x=function(i){return L+(i+0.5)*pw/n;},h="";
+  var pr=s.price.slice(st),mn=Math.min.apply(null,pr),mx=Math.max.apply(null,pr),pad=(mx-mn)*0.08||1;mn-=pad;mx+=pad;
+  var yp=function(v){return y1+H1-(v-mn)/(mx-mn)*H1;},yi=function(v){return y2+H2-v/100*H2;};
+  var po=s.posts.slice(st),pm=Math.max.apply(null,po),yb=function(v){return v/pm*H3;};
+  function lab(tx,y){h+='<text x="'+L+'" y="'+y+'" font-size="12" font-weight="600" fill="#1c2230">'+tx+'</text>';}
+  lab("주가",y1-5);lab("심리 지수 (0~100)",y2-5);lab("글 수 (진한 막대 = 평소의 2배 이상)",y3-5);
+  [mn+pad,(mn+mx)/2,mx-pad].forEach(function(v){h+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+yp(v).toFixed(1)+'" y2="'+yp(v).toFixed(1)+'" stroke="#eceff4"/><text x="'+(L-6)+'" y="'+(yp(v)+4).toFixed(1)+'" font-size="11" fill="#5d6676" text-anchor="end">'+Math.round(v)+'</text>';});
+  h+='<rect x="'+L+'" y="'+yi(100)+'" width="'+pw+'" height="'+(yi(75)-yi(100))+'" fill="#d64545" opacity=".09"/><rect x="'+L+'" y="'+yi(25)+'" width="'+pw+'" height="'+(yi(0)-yi(25))+'" fill="#2f5fd0" opacity=".09"/>';
+  [0,25,50,75,100].forEach(function(v){h+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+yi(v)+'" y2="'+yi(v)+'" stroke="'+(v===50?"#c9cfda":"#eceff4")+'"/><text x="'+(L-6)+'" y="'+(yi(v)+4)+'" font-size="11" fill="#5d6676" text-anchor="end">'+v+'</text>';});
+  var dP="",dI="";for(var i=0;i<n;i++){dP+=(i?"L":"M")+x(i).toFixed(1)+" "+yp(pr[i]).toFixed(1);dI+=(i?"L":"M")+x(i).toFixed(1)+" "+yi(s.idx[st+i]).toFixed(1);
+    var bh=yb(po[i]),hot=s.ratio[st+i]>=2;h+='<rect x="'+(x(i)-pw/n*0.36).toFixed(1)+'" y="'+(y3+H3-bh).toFixed(1)+'" width="'+(pw/n*0.72).toFixed(1)+'" height="'+bh.toFixed(1)+'" fill="'+(hot?"#7a4bd0":"#c3cad8")+'"/>';}
+  h+='<path d="'+dP+'" fill="none" stroke="#141a26" stroke-width="1.8"/><path d="'+dI+'" fill="none" stroke="#b7791f" stroke-width="1.8"/>';
+  h+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+(y3+H3)+'" y2="'+(y3+H3)+'" stroke="#c9cfda"/>';
+  var step=Math.ceil(n/6);for(i=0;i<n;i+=step)h+='<text x="'+x(i).toFixed(1)+'" y="'+(H-8)+'" font-size="11" fill="#5d6676" text-anchor="middle">'+dates[st+i].slice(5)+'</text>';
+  h+='<line id="cross" x1="0" x2="0" y1="'+y1+'" y2="'+(y3+H3)+'" stroke="#2f5fd0" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>';
+  h+='<rect id="hit" x="'+L+'" y="'+y1+'" width="'+pw+'" height="'+(y3+H3-y1)+'" fill="transparent"/>';
+  $("chart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(s.name)+' 주가, 심리 지수, 글 수">'+h+'</svg>';
+  var svg=$("chart").firstChild,hit=svg.querySelector("#hit"),cross=svg.querySelector("#cross"),tip=$("tip"),box=$("chartbox");
+  function move(ev){
+    var rc=svg.getBoundingClientRect(),cxp=(ev.touches?ev.touches[0].clientX:ev.clientX),sx=(cxp-rc.left)/rc.width*W,i=clamp(Math.floor((sx-L)/(pw/n)),0,n-1),u=st+i;
+    cross.setAttribute("x1",x(i));cross.setAttribute("x2",x(i));cross.setAttribute("visibility","visible");
+    tip.innerHTML="<b>"+dates[u]+"</b><br>주가 "+f1(s.ret[u])+"% · 지수 "+Math.round(s.idx[u])+" ("+zone(s.idx[u])+")<br>글 "+s.posts[u].toLocaleString()+"건 ("+s.ratio[u].toFixed(1)+"배) · 개인 "+f1(s.priv[u])+"%";
+    tip.style.display="block";var bx=box.getBoundingClientRect(),px=cxp-bx.left+12;if(px+tip.offsetWidth>bx.width-6)px=cxp-bx.left-tip.offsetWidth-12;tip.style.left=Math.max(4,px)+"px";tip.style.top="26px";
+  }
+  function leave(){cross.setAttribute("visibility","hidden");tip.style.display="none";}
+  hit.addEventListener("mousemove",move);hit.addEventListener("mouseleave",leave);hit.addEventListener("touchstart",move,{passive:true});hit.addEventListener("touchmove",move,{passive:true});
+}
+function bucket(r){return r<1.25?0:r<2?1:2;}
+function renderAnalog(s){
+  var t=LAST,up=s.ret[t]>0,b=bucket(s.ratio[t]),vals=[];
+  stocks.forEach(function(x){for(var u=WIN;u<LAST;u++)if((x.ret[u]>0)===up&&bucket(x.ratio[u])===b)vals.push(x.priv[u+1]);});
+  var n=vals.length,mean=0,pos=0;vals.forEach(function(v){mean+=v;if(v>0)pos++;});mean=n?mean/n:0;
+  var bins=[],lo=-15,stp=3,nb=10,i;for(i=0;i<nb;i++)bins.push(0);vals.forEach(function(v){bins[clamp(Math.floor((v-lo)/stp),0,nb-1)]++;});
+  var mxb=Math.max.apply(null,bins)||1,W=320,Hh=92,bw=W/nb,h="";
+  for(i=0;i<nb;i++){var bh=bins[i]/mxb*64,c=(lo+i*stp)>=0?"#d64545":"#2f5fd0";h+='<rect x="'+(i*bw+2)+'" y="'+(70-bh).toFixed(1)+'" width="'+(bw-4)+'" height="'+bh.toFixed(1)+'" fill="'+c+'" opacity=".75"/>';}
+  h+='<line x1="0" x2="'+W+'" y1="70" y2="70" stroke="#c9cfda"/><text x="2" y="86" font-size="11" fill="#5d6676">−15%</text><text x="'+(W/2)+'" y="86" font-size="11" fill="#5d6676" text-anchor="middle">0</text><text x="'+(W-2)+'" y="86" font-size="11" fill="#5d6676" text-anchor="end">+15%</text>';
+  var cond=(up?"상승일":"하락일")+" + 글 수 "+["평소 수준(1.25배 미만)","1.25~2배","2배 이상"][b];
+  $("analog").innerHTML='<p style="margin:0 0 6px">오늘 조건: <b>'+cond+'</b></p><div class="big">'+n.toLocaleString()+'번 중 '+pos.toLocaleString()+'번 <span style="font-size:15px;font-weight:600">다음 날 개인 순매수</span></div><p style="margin:2px 0 6px">다음 날 개인 순매수 평균 <b>'+f1(mean)+'%</b> (거래대금 대비)</p><svg viewBox="0 0 '+W+' '+Hh+'" role="img" aria-label="다음 날 개인 순매수 분포" style="display:block;width:100%;max-width:340px">'+h+'</svg><p class="small" style="margin:4px 0 0">45종목의 같은 조건이던 날을 모은 기록입니다. 주가 방향에 대한 예측이 아닙니다.</p>';
+}
+
+/* ---------- 장전 브리핑 ---------- */
+function renderBrief(){
+  var t=LAST,list=stocks.filter(function(s){return s.nposts[t]>=5;}).slice().sort(function(a,b){return a.nidx[t]-b.nidx[t];});
+  function tb(arr){return '<div class="tbl" style="margin:0"><table class="btable"><thead><tr><th>종목</th><th>밤 심리</th><th>밤 글</th><th>전일 주가</th></tr></thead><tbody>'+arr.map(function(s){return '<tr data-go="'+s.code+'"><td>'+esc(s.name)+'</td><td><span class="pill" style="background:'+color(s.nidx[t])+';color:'+ink(s.nidx[t])+'">'+Math.round(s.nidx[t])+'</span></td><td>'+s.nposts[t]+'건</td><td>'+f1(s.ret[t-1])+'%</td></tr>';}).join("")+'</tbody></table></div>';}
+  $("bfear").innerHTML=tb(list.slice(0,5));$("bgreed").innerHTML=tb(list.slice(-5).reverse());
+  var lo=[0,0],hi=[0,0];stocks.forEach(function(x){for(var u=WIN;u<=LAST;u++){if(x.nposts[u]<5)continue;if(x.nidx[u]<=20){lo[0]++;if(x.gap[u]>0)lo[1]++;}if(x.nidx[u]>=80){hi[0]++;if(x.gap[u]>0)hi[1]++;}}});
+  $("bhist").innerHTML='<div class="kpis" style="margin:0"><div class="kpi"><div class="l">밤 심리 하위 20%였던 날</div><div class="v" style="color:var(--fear)">'+Math.round(lo[1]/lo[0]*100)+'%</div><div class="s">상승 출발 비율 ('+lo[0].toLocaleString()+'번)</div></div><div class="kpi"><div class="l">밤 심리 상위 20%였던 날</div><div class="v" style="color:var(--greed)">'+Math.round(hi[1]/hi[0]*100)+'%</div><div class="s">상승 출발 비율 ('+hi[0].toLocaleString()+'번)</div></div><div class="kpi"><div class="l">발표자료의 실제 값</div><div class="v">33% → 78%</div><div class="s">가장 공포인 밤 → 가장 탐욕인 밤 (29장)</div></div></div>';
+}
+
+/* ---------- 이벤트 ---------- */
+function show(v){["home","stock","brief"].forEach(function(k){$("v-"+k).classList.toggle("on",k===v);});
+  Array.prototype.forEach.call($("tabs").children,function(b){b.classList.toggle("on",b.getAttribute("data-v")===v);});
+  if(v==="stock")renderStock();}
+function go(code){cur=code;$("sel").value=code;show("stock");}
+$("tabs").addEventListener("click",function(e){var v=e.target.getAttribute("data-v");if(v)show(v);});
+$("app").addEventListener("click",function(e){var el=e.target.closest("[data-go]");if(el){go(el.getAttribute("data-go"));return;}
+  var tl=e.target.closest("[data-sec]");if(tl){selSec=tl.getAttribute("data-sec");renderHome();}});
+$("tiles").addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){var tl=e.target.closest("[data-sec]");if(tl){e.preventDefault();selSec=tl.getAttribute("data-sec");renderHome();}}});
+$("range").addEventListener("click",function(e){var r=e.target.getAttribute("data-r");if(!r)return;rangeN=+r;Array.prototype.forEach.call($("range").children,function(b){b.classList.toggle("on",b===e.target);});renderStock();});
+var opt="";secNames.forEach(function(sec){opt+='<optgroup label="'+esc(sec)+'">';Object.keys(SECTORS[sec]).forEach(function(c){opt+='<option value="'+c+'">'+esc(SECTORS[sec][c])+'</option>';});opt+='</optgroup>';});
+$("sel").innerHTML=opt;$("sel").addEventListener("change",function(){cur=this.value;renderStock();});
+$("asof").textContent=dates[LAST]+" 20:00 마감 기준";
+selSec=secNames[0];renderHome();renderBrief();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+numpy
+pandas
+scipy
+scikit-learn
+statsmodels
+linearmodels
+lightgbm
+joblib
+kiwipiepy   # 없으면 단어 특징 없이 동작 (train_v2.py --no-words)
