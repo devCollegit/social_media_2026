@@ -1,7 +1,7 @@
 # 토스증권 커뮤니티 공포탐욕지수
 
 토스증권 종목 커뮤니티 글로 종목마다 매일 공포탐욕지수(0~100)를 만들고 KRX 주가·투자자별 수급과 맞대 본 코드다.
-45종목(15섹터 × 3종목), 2024-10-28 ~ 2026-11-11, 글 약 1,257만 건을 분석했다.
+45종목(15섹터 × 3종목), 2024-10-28 ~ 2026-11-11, 글 약 1,260만 건을 분석했다.
 
 원문 글, 판정 라벨, 학습된 모델 파일은 저장소에 올리지 않았다. 아래 형식으로 글 파일을 준비하면 처음부터 다시 돌릴 수 있다.
 
@@ -37,16 +37,20 @@
 | 4. 분류 모델 | `featurize.py` | 학습·적용 공통 전처리 (멘션 → `@사용자`, 종목명 → `종목`, 숫자 → `0`) | |
 | | `lr_trial.py` | 글자 조각(2~4) TF-IDF + 로지스틱 회귀 시험. 확률 0.7 이상만 판정 (정확도 85%, 판정 28%) | |
 | | `lr_prevyear.py` | 최근 1년으로 학습한 모델이 이전 1년에도 통하는지 비교 | |
-| | `train_final.py` | 최종 학습: LLM 판정 29,000건 (최근 1년 23,000 + 이전 1년 6,000) | `model.joblib` |
-| 5. 전체 적용 | `apply_all2.py` | 전체 글을 판정해 종목·30분 단위로 집계. 원문은 저장하지 않는다 | `apply_out2/` |
-| 6. 지수 | `build_index.py` | 거래일 배정(20:00 경계), 감성 점수 S = (탐욕 − 공포 + 10 × 그 종목 평소 수준) ÷ (전체 + 10), 60거래일 백분위, 방향·강도 축(주성분 가중치), 국면 | `index_out/` |
+| | `train_final.py` | 이전 모델 학습(본문 글자 조각만, 비교용): LLM 판정 29,000건 (최근 1년 23,000 + 이전 1년 6,000) | `model.joblib` |
+| | `eval_quant.py` | 판정을 세는 방식 비교: 확률 합산, 5분류 확률 보정, 보정 집계 vs 확률 0.7 이상 개수. 낫지 않아 지금 방식 유지 | `eval_quant.json` |
+| | `eval_features_cv.py` | 입력 추가 비교(5겹 교차검증): 부모 글 · 대댓글 · 매수/매도 인증 · 보유, 단어(형태소, '안·못' 부정 처리). 월별 탐욕 비율 오차 5.47 → 4.33%p | `eval_features_cv.json` |
+| | `train_final2.py` | 최종 학습: 같은 29,000건, 본문 글자 조각 + 부모 글 글자 조각(가중 0.5) + 단어 + 대댓글 · 인증 · 보유 0/1 → 로지스틱 회귀 | `model_v2.joblib` |
+| 5. 전체 적용 | `apply_all3.py` | 최종 모델로 전체 글을 판정해 종목·30분 단위로 집계. 매수·매도 인증 글 수, 보유자 글 수와 그 탐욕·공포 수도 센다. 원문은 저장하지 않는다 | `apply_out3/` |
+| | `apply_all2.py` | 이전 모델(`model.joblib`)로 같은 집계 (비교용) | `apply_out2/` |
+| 6. 지수 | `build_index.py` | `apply_out3/`을 읽어 거래일 배정(20:00 경계), 감성 점수 S = (탐욕 − 공포 + 10 × 그 종목 평소 수준) ÷ (전체 + 10), 60거래일 백분위, 방향·강도 축(주성분 가중치), 국면 | `index_out/` |
 | 7. KRX | `fetch_krx.py` | 종목 일봉과 거래일 달력 (로그인 불필요) | `ohlcv.json` 등 |
 | | `fetch_krx_login.py` | 코스피·코스닥 지수, 투자자별 순매수, 공매도(2025-03-31 재개 이후) (환경 변수 `KRX_ID`·`KRX_PW` 필요) | `krx_index.json`, `krx_investor.json`, `krx_short.json` |
 | 8. 분석 | `analysis_krx.py` | 밤사이 심리 → 다음 날 시가·장중(선행), 주가 → 심리(후행) | `krx_results.json` |
 | | `analysis_presentation.py` | 글 수와 개인 수급, 투자자별 수급과 심리, 급락일 전후, 주간·야간 비교 | `pres_results.json` |
 | | `analysis_rotation.py` | 분기·월별 섹터 순매수 이동, 대표 12종목 | `rotation_results.json` |
 | | `rotation_keywords.py` | 섹터·분기별 토론글 대표 단어 (단어와 빈도만 저장) | `rotation_keywords.json` |
-| | `analysis_extra.py` | 지수 구간별 이후 성과, 심리 → 다음 날 거래량·변동폭·공매도, 탐욕·공포 반응 경로, 잔차 심리, 다음 날 예측 비교 | `extra_results.json` |
+| | `analysis_extra.py` | 지수 구간별 이후 성과, 심리 → 다음 날 거래량·변동폭·공매도, 탐욕·공포 반응 경로, 잔차 심리, 다음 날 예측 비교, 커뮤니티 안 인증 · 보유 행동과 실제 수급 | `extra_results.json` |
 | 9. 발표자료 | `presentation/build_presentation.py` | 분석 결과로 HTML 발표자료를 만든다 | `.html` |
 | | `presentation/export_pdf.py` | HTML을 PDF로 바꾼다 | `.pdf` |
 
@@ -55,7 +59,7 @@
 Python 3.10. 사용한 패키지는 numpy, pandas, scipy, scikit-learn 1.7.2, statsmodels, joblib, kiwipiepy, pykrx, matplotlib, playwright다.
 
 ```bash
-uv run --python 3.10 --with scikit-learn==1.7.2 --with joblib python train_final.py
+uv run --python 3.10 --with scikit-learn==1.7.2 --with joblib --with scipy --with kiwipiepy python train_final2.py
 ```
 
 ## 참고

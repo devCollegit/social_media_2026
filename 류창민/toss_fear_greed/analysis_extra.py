@@ -129,9 +129,26 @@ for y in ["priv_n1", "vr_n1", "range_n1"]:
     res["n_test"] = int(len(truth)); out[y] = res
 R["c5"] = out; R["c5_test"] = [test_months[0], test_months[-1]]
 
+# ---------- B5 행동 축: 커뮤니티 안의 매수·매도 인증, 보유자 vs 비보유자 심리 ----------
+if "n_buy" in s.columns:
+    nb = s.n_buy + s.n_sell
+    s["buy_sh"] = (s.n_buy / nb).where(nb >= 5)                                  # 매수 인증 비율 (인증 글 5건 이상인 날)
+    s["badge_rate"] = nb / s.n_posts.where(s.n_posts > 0) * 100
+    s["S_hold"] = (s.h_greed - s.h_fear) / (s.n_holder + 10)
+    nh = s.n_posts - s.n_holder; s["S_non"] = ((s.n_greed - s.h_greed) - (s.n_fear - s.h_fear)) / (nh + 10)
+    s["hold_sh"] = s.n_holder / s.n_posts.where(s.n_posts > 0) * 100
+    s["buy_z"] = z(s.buy_sh); s["hz"] = z(s.S_hold); s["nz"] = z(s.S_non)
+    R["b5_desc"] = {"badge_rate": float(s.badge_rate.mean()), "buy_share": float(s.buy_sh.mean()), "hold_share": float(s.hold_sh.mean()),
+                    "days_with_badges": int(s.buy_sh.notna().sum()), "corr_buy_S": float(s[["buy_sh", "S"]].dropna().corr().iloc[0, 1]),
+                    "S_hold": float(s.S_hold.mean()), "S_non": float(s.S_non.mean()), "corr_hold_non": float(s[["S_hold", "S_non"]].dropna().corr().iloc[0, 1])}
+    R["b5_buy_S"] = keep(fe("buy_z ~ Sz + ret", s), ["Sz"])                          # 말(심리)과 인증 행동이 같은 방향인가
+    R["b5_buy_priv"] = keep(fe("priv ~ buy_z + Sz + ret + mret", s), ["buy_z", "Sz"])   # 인증 매수가 그날 실제 개인 순매수와 같이 움직이나
+    R["b5_buy_priv_n1"] = keep(fe("priv_n1 ~ buy_z + Sz + ret + priv", s), ["buy_z", "Sz"])
+    R["b5_buy_fwd1"] = keep(fe("fwd1 ~ buy_z + Sz + ret", s), ["buy_z", "Sz"])
+    R["b5_hold_vs_non"] = {y: keep(fe(f"{y} ~ hz + nz + ret", s), ["hz", "nz"]) for y in ["fwd1", "priv_n1", "priv"]}
 R["short_coverage"] = {"days": int(s[s.date >= "2025-03-31"].short.notna().sum()), "zero_share": float((s[s.date >= "2025-03-31"].short == 0).mean())}
 json.dump(R, open("extra_results.json", "w"), ensure_ascii=False, indent=1, default=float)
 pr = lambda k: print(k, json.dumps(R[k], ensure_ascii=False, default=float)[:600])
-for k in ["b4_fit", "b4_cases", "b4_fwd1", "b4_fwd5", "b4_priv_n1", "b4_vr_n1", "c2_bucket", "c2_regime", "c2_reg_fwd1", "c2_reg_fwd5", "c2_reg_fwd20",
+for k in [k for k in R if k.startswith("b5_")] + ["b4_fit", "b4_cases", "b4_fwd1", "b4_fwd5", "b4_priv_n1", "b4_vr_n1", "c2_bucket", "c2_regime", "c2_reg_fwd1", "c2_reg_fwd5", "c2_reg_fwd20",
           "c3_vr_n1", "c3_range_n1", "c3_short_n1", "c4_same", "c4_next", "c4_quint", "c5", "short_coverage"]: pr(k)
 for r in path: print(r["h"], round(r["ret_g"], 3), round(r["ret_g_t"], 1), round(r["ret_f"], 3), round(r["ret_f_t"], 1), "| priv", round(r["priv_g"], 2), round(r["priv_g_t"], 1), round(r["priv_f"], 2), round(r["priv_f_t"], 1))

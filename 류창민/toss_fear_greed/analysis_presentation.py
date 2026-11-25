@@ -1,4 +1,4 @@
-"""발표용 분석 (4장). 입력: apply_out2/ (종목·30분 집계), index_out/daily_stock.csv·daily_sector.csv, ohlcv.json, krx_index.json, krx_investor.json, trading_days.csv
+"""발표용 분석 (4장). 입력: apply_out3/ (종목·30분 집계), index_out/daily_stock.csv·daily_sector.csv, ohlcv.json, krx_index.json, krx_investor.json, trading_days.csv
 4-1 글 수 ↔ 개인 수급 / 4-2 투자자별 수급 vs 커뮤니티 심리(종목·섹터, 급락일 전후) / 4-3 주간 vs 야간 감성의 선행·후행 (장초 = 시가 갭)
 출력: pres_results.json
 사용: uv run --python 3.10 --with pandas --with statsmodels python analysis_presentation.py"""
@@ -24,7 +24,7 @@ def to_tday(slot):   # build_index.py와 같은 규칙: 20:00 이후 → 다음 
     return td, ("night" if (td != d or hm < "09:00") else "day")
 
 rows, hours = [], []
-for f in sorted(glob.glob("apply_out2/*.csv")):
+for f in sorted(glob.glob("apply_out3/*.csv")):
     x = pd.read_csv(f)
     if x.empty: continue
     x["code"] = os.path.basename(f).split("_")[0]

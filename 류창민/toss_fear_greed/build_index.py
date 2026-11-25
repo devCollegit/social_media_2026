@@ -1,4 +1,4 @@
-"""기획안 4절 지수 만들기. 입력: apply_out2/ (종목·30분 집계), trading_days.csv (KRX 거래일, pykrx 삼성전자 일봉 날짜).
+"""기획안 4절 지수 만들기. 입력: apply_out3/ (종목·30분 집계, 모델 v2 = A4+A5, 김정기 형식 원문에 적용), trading_days.csv (KRX 거래일, pykrx 삼성전자 일봉 날짜).
 거래일 배정: 그날 20:00 이전 글 -> 그 거래일, 20:00 이후 글 -> 다음 거래일 (주말·휴장일 글도 다음 거래일로).
 장전(밤사이) 감성: 전 거래일 20:00 ~ 당일 09:00(정규장 개장) 전 글. 글이 적으면 그 종목 평소 감성(직전 20거래일 일간 (긍정-부정)/전체 평균)으로 10건분 당김.
 출력: index_out/daily_stock.csv, daily_sector.csv, daily_market.csv
@@ -33,7 +33,7 @@ def to_tday(slot):   # 'YYYY-MM-DDTHH:MM' -> (거래일, 장전 여부)
     return td, pre
 
 rows = []
-for f in sorted(glob.glob(f"{D}/apply_out2/*.csv")):
+for f in sorted(glob.glob(f"{D}/apply_out3/*.csv")):
     code = os.path.basename(f).split("_")[0]
     x = pd.read_csv(f)
     if x.empty: continue
@@ -42,7 +42,7 @@ for f in sorted(glob.glob(f"{D}/apply_out2/*.csv")):
     x["pre8"] = [b and not (sl[:10] == a and sl[11:] >= "08:00") for sl, (a, b) in zip(x["slot_kst"], m)]   # 강건성: NXT 프리마켓(08:00) 전까지만
     rows.append(x.dropna(subset=["date"]))
 x = pd.concat(rows)
-cols = ["n_posts", "n_greed", "n_fear", "n_kw_greed", "n_kw_fear"]
+cols = ["n_posts", "n_greed", "n_fear", "n_kw_greed", "n_kw_fear"] + [c for c in ["n_buy", "n_sell", "n_holder", "h_greed", "h_fear"] if c in x.columns]   # B5 행동 축
 day = x.groupby(["code", "date"])[cols].sum()
 pre = x[x["pre"]].groupby(["code", "date"])[["n_posts", "n_greed", "n_fear"]].sum().add_prefix("pre_")
 pre8 = x[x["pre8"]].groupby(["code", "date"])[["n_posts", "n_greed", "n_fear"]].sum().add_prefix("pre8_")
