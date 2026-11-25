@@ -40,7 +40,7 @@ pv = x.groupby(["code", "date", "part"])[["n_posts", "n_greed", "n_fear"]].sum()
 pv.columns = [f"{p}_{c}" for c, p in pv.columns]; pv = pv.reset_index()
 R["posts_total"] = int(x.n_posts.sum()); R["posts_day_share"] = float(x.loc[x.part == "day", "n_posts"].sum() / x.n_posts.sum())
 
-s = pd.read_csv("index_out/daily_stock.csv", dtype={"code": str})[["date", "code", "sector", "n_posts", "n_greed", "n_fear", "S", "direction"]]
+s = pd.read_csv("index_out/daily_stock.csv", dtype={"code": str})[["date", "code", "sector", "n_posts", "n_greed", "n_fear", "S", "direction", "pre8_n_posts", "pre8_n_greed", "pre8_n_fear"]]
 s = s.merge(pv, on=["code", "date"], how="left").fillna({c: 0 for c in pv.columns if c not in ("code", "date")})
 px = lambda c, d, k: (ohl.get(c, {}).get(d) or [None] * 5)[k]
 s["open"] = [px(c, d, 0) for c, d in zip(s.code, s.date)]; s["close"] = [px(c, d, 3) for c, d in zip(s.code, s.date)]
@@ -98,14 +98,15 @@ dm = c.groupby("code")[["S", "priv", "inst", "frgn", "ret"]].transform(lambda v:
 R["corr_within"] = {k: float(dm.S.corr(dm[k])) for k in ["priv", "inst", "frgn", "ret"]}
 R["corr_pooled"] = {k: float(c.S.corr(c[k])) for k in ["priv", "inst", "frgn"]}
 # 감성 5분위별 투자자 순매수 비율
+c["instfrgn"] = c.inst + c.frgn                                    # C7: 개인의 맞은편 = 기관 + 외국인
 c["q"] = pd.qcut(c.S, 5, labels=["가장 공포", "공포", "중간", "탐욕", "가장 탐욕"])
-t = c.groupby("q", observed=True)[["priv", "inst", "frgn", "ret"]].mean().reset_index()
-R["sent_quint_flows"] = [{"q": str(r.q), "priv": float(r.priv), "inst": float(r.inst), "frgn": float(r.frgn), "ret": float(r.ret)} for r in t.itertuples()]
+t = c.groupby("q", observed=True)[["priv", "inst", "frgn", "instfrgn", "ret"]].mean().reset_index()
+R["sent_quint_flows"] = [{"q": str(r.q), "priv": float(r.priv), "inst": float(r.inst), "frgn": float(r.frgn), "instfrgn": float(r.instfrgn), "ret": float(r.ret)} for r in t.itertuples()]
 # 수익률을 통제해도 남는가
-for who in ["priv", "inst", "frgn"]:
+for who in ["priv", "inst", "frgn", "instfrgn"]:
     R[f"flow_reg_{who}"] = keep(fe(f"{who} ~ Sz + ret + mret", c), ["Sz", "ret"])
 # 다음 날 수급
-for who in ["priv", "inst", "frgn"]:
+for who in ["priv", "inst", "frgn", "instfrgn"]:
     c[who + "_next"] = c.groupby("code")[who].shift(-1)
     R[f"flow_next_reg_{who}"] = keep(fe(f"{who}_next ~ Sz + ret + {who} + mret", c.dropna(subset=[who + "_next"])), ["Sz", "ret"])
 
@@ -119,7 +120,9 @@ for w in ["priv", "inst", "frgn"]: sec[w + "_r"] = sec[w] / sec.tv * 100
 sec["rk"] = sec.groupby("date").S.rank(ascending=False)
 nsec = sec.groupby("date").sector.transform("size")
 top, bot = sec[sec.rk <= 3], sec[sec.rk > nsec - 3]
-R["sector_greed_vs_fear"] = {grp: {w: float(dd[w + "_r"].mean()) for w in ["priv", "inst", "frgn"]} | {"ret": float(dd.close_ret.mean())} for grp, dd in [("탐욕 상위 3섹터", top), ("공포 하위 3섹터", bot)]}
+sec["instfrgn_r"] = sec.inst_r + sec.frgn_r
+top, bot = sec[sec.rk <= 3], sec[sec.rk > nsec - 3]
+R["sector_greed_vs_fear"] = {grp: {w: float(dd[w + "_r"].mean()) for w in ["priv", "inst", "frgn", "instfrgn"]} | {"ret": float(dd.close_ret.mean())} for grp, dd in [("탐욕 상위 3섹터", top), ("공포 하위 3섹터", bot)]}
 # 같은 날 '개인 순매수가 가장 큰 섹터'와 '기관 순매수가 가장 큰 섹터'가 겹치는 비율
 pk = sec.loc[sec.groupby("date").priv_r.idxmax(), ["date", "sector"]].rename(columns={"sector": "p"})
 ik = sec.loc[sec.groupby("date").inst_r.idxmax(), ["date", "sector"]].rename(columns={"sector": "i"})
@@ -133,7 +136,12 @@ R["frgn_top_sector_sent_pct"] = float(sec.loc[sec.groupby("date").frgn_r.idxmax(
 # 급락일 전후: 코스피 −3% 이하인 날. 직전 5거래일 기관 순매수 상위 3섹터 vs 하위 3섹터의 급락일·이후 5일 수익률, 커뮤니티 감성
 kd = sorted(kidx["KOSPI"]); kc = {d: kidx["KOSPI"][d][3] for d in kd}
 kret = {d: (kc[d] / kc[p] - 1) * 100 for p, d in zip(kd, kd[1:])}
-crash = [d for d in kd if kret.get(d, 0) <= -3 and d >= "2024-11-05"]
+crash_all = [d for d in kd if kret.get(d, 0) <= -3 and d >= "2024-11-05"]
+crash = []                                   # C8: 직전 10거래일 안에 다른 급락일이 있으면 뺀다(첫 급락일만)
+for d in crash_all:
+    i = kd.index(d)
+    if not any(x in crash_all for x in kd[max(0, i - 10):i]): crash.append(d)
+R["crash_all_n"] = len(crash_all)
 secp = sec.pivot(index="date", columns="sector", values="inst_r").sort_index()
 secS = sec.pivot(index="date", columns="sector", values="S").sort_index()
 secret = s.groupby(["date", "sector"]).ret.mean().unstack().sort_index()
@@ -173,6 +181,16 @@ d = s.dropna(subset=["ret", "ret_1", "gap", "intra", "S_day_1", "S_night", "mret
 d = d[(d.night_n_posts >= 5) & (d.day_n_posts_1 if "day_n_posts_1" in d else True)] if False else d[d.night_n_posts >= 5]
 d["Sd1z"] = z(d.S_day_1); d["Snz"] = z(d.S_night)
 d["up"] = (d.ret > 0).astype(float)
+d["date_fe"] = d.date
+d["m_open"] = [(kidx[m].get(t) or [None] * 5)[0] for m, t in zip(d.mk, d.date)]
+d["mgap"] = (d.m_open / d.groupby("code").m_close.shift(1) - 1) * 100
+R["c1_mgap"] = keep(fe("gap ~ Snz + Sd1z + ret_1 + mret_1 + mgap", d.dropna(subset=["mgap"])), ["Snz", "mgap"])
+for y in ["gap", "intra", "ret", "up"]:
+    R[f"dfe_lead_{y}"] = keep(fe(f"{y} ~ Snz + Sd1z + ret_1 + C(date_fe)", d), ["Snz", "Sd1z"])
+d["S_n8"] = (d.pre8_n_greed - d.pre8_n_fear) / (d.pre8_n_posts + K); d["Sn8z"] = z(d.S_n8)
+R["dfe_lead_gap_0800"] = keep(fe("gap ~ Sn8z + Sd1z + ret_1 + C(date_fe)", d), ["Sn8z"])
+pre_nxt = d[d.date < "2025-03-04"]
+R["dfe_lead_gap_prenxt"] = keep(fe("gap ~ Snz + Sd1z + ret_1 + C(date_fe)", pre_nxt), ["Snz"]) | {"n": len(pre_nxt)}
 R["daynight_n"] = {"rows": int(len(d)), "stocks": int(d.code.nunique()), "days": int(d.date.nunique()), "period": [d.date.min(), d.date.max()]}
 for y in ["gap", "intra", "ret", "up"]:
     m = fe(f"{y} ~ Sd1z + Snz + ret_1 + mret_1", d)
