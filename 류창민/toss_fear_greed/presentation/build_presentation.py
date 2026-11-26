@@ -24,14 +24,24 @@ pct = lambda v: f"{v*100:.0f}%"
 lb = R["posts_vs_priv_bins"]; bd = R["posts_vs_priv_by_dir"]; q5 = R["sent_quint_flows"]
 nq, dq = R["night_quint"], R["day_quint"]; lag = R["lag_bins_daynight"]; cp = R["crash_profile"]; cs = R["crash_summary"]
 N_POSTS = R["posts_total"]; DN = R["daynight_n"]
-# 모델 v2(A4+A5) 성능: 5겹 교차검증(eval_features_cv.json), 전체 적용 결과: index_out/daily_stock.csv, 적용 시간: apply_out3_meta.json
+# 모델 성능(같은 5겹 교차검증): 글자 조각만 · + 부모 글 · 단어 · 인증 · 보유(eval_features_cv.json), KcELECTRA 미세조정 = 최종(a9_cv.json)
+# 전체 적용 결과: index_out/daily_stock.csv, 적용 시간: apply_out4_meta.json
 import csv as _csv
-MV = json.load(open(os.path.join(HERE, "../eval_features_cv.json"))); MV_OLD, MV_NEW = MV["(a) 지금"], MV["(d) A4+A5"]
+MV = json.load(open(os.path.join(HERE, "../eval_features_cv.json"))); A9 = json.load(open(os.path.join(HERE, "../a9_cv.json")))
+MV_A, MV_D, MV_NEW = MV["(a) 지금"], MV["(d) A4+A5"], A9["a9_thr0.7"]; A9_BETTER = A9["better_folds_ratio_err_0.7"]
 _ds = list(_csv.DictReader(open(os.path.join(HERE, "../index_out/daily_stock.csv"))))
 _tp, _tg, _tf = (sum(float(r[k]) for r in _ds) for k in ("n_posts", "n_greed", "n_fear"))
 APPLY_DEC, APPLY_GREED = (_tg + _tf) / _tp, _tg / (_tg + _tf)
-_meta = os.path.join(HERE, "../apply_out3_meta.json"); APPLY_MIN = json.load(open(_meta))["minutes"] if os.path.exists(_meta) else 15
+_meta = os.path.join(HERE, "../apply_out4_meta.json"); APPLY_HR = json.load(open(_meta))["minutes"] / 60 if os.path.exists(_meta) else 5.5
 ACC_NEW = MV_NEW["acc"]["mean"] * 100
+_a8p = os.path.join(HERE, "../a8/multi/multi_report.json")   # A8 여러 축 판정 결과(원문 없음). 없으면 13장 근거 상자를 뺀다
+_a8 = json.load(open(_a8p)) if os.path.exists(_a8p) else None
+A8 = None if _a8 is None else {"n": _a8["n"], "fear_scared": _a8["fear_breakdown"]["scared(anxiety+panic)"] * 100, "fear_anger": _a8["fear_breakdown"]["anger"] * 100,
+      "fear_regret": _a8["fear_breakdown"]["regret"] * 100, "greed_hope": _a8["greed_breakdown"]["hope+excitement"] * 100, "buy_says_buy": _a8["badge_x_intent"]["BUY"]["buy"] * 100}
+PLC = R["crash_placebo"]["excl_events"]; PLC_N = R["crash_placebo"]["draws"]   # 급락 위약 검정: 이 급락들의 앞뒤 10일을 뺀 날짜에서 무작위로
+USG = R["daynight_lead_gap_us"]
+INTRA = R["dfe_lead_intra"]["Snz"]; INTRA_SIG = abs(INTRA["t"]) >= 1.96   # 장중(시가→종가) 효과가 유의할 때만 '되돌린다'고 쓴다
+AFTER_OPEN = "장이 열린 뒤엔 오히려 조금 되돌린다" if INTRA_SIG else "장이 열린 뒤엔 더 이어지지 않는다"
 dirv = {(r["dir"], r["bin"]): r["priv"] for r in bd}
 SEC = R["sector_greed_vs_fear"]
 SEC_TXT = json.load(open(os.path.join(HERE, "../sectors.json")))
@@ -46,7 +56,8 @@ COST = IN_TOK / 1e6 * 0.10 + OUT_TOK / 1e6 * 0.50
 CH = {}
 CH["hour"] = dict(type="bar", cats=[f"{r['hour']}" for r in R["by_hour"]], series=[("글 수(만 건)", [r["posts"] / 1e4 for r in R["by_hour"]], NEU)],
                   ylabel="글 수(만 건)", xlabel="작성 시각(시)", fmt="{:.0f}", labels=False, hl={str(h): NIGHT for h in list(range(0, 9)) + [20, 21, 22, 23]})
-CH["perf"] = dict(type="bar", cats=["글자 조각만 (이전)", "+ 부모 글 · 단어 · 인증 · 보유 (최종)"], series=[("판정한 글 정확도", [MV_OLD["acc"]["mean"] * 100, ACC_NEW], INK), ("판정 비율", [MV_OLD["decided"]["mean"] * 100, MV_NEW["decided"]["mean"] * 100], NEU), ("월별 탐욕 비율 오차(%p)", [MV_OLD["ratio_err"]["mean"] * 100, MV_NEW["ratio_err"]["mean"] * 100], GREED)], ylabel="%", fmt="{:.1f}", labels=True, legend=dict(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=3))
+MV3 = [MV_A, MV_D, MV_NEW]
+CH["perf"] = dict(type="bar", cats=["글자 조각만", "+ 부모 글 · 단어 · 인증 · 보유", "사전학습 언어 모델 (최종)"], series=[("판정한 글 정확도", [m["acc"]["mean"] * 100 for m in MV3], INK), ("판정 비율", [m["decided"]["mean"] * 100 for m in MV3], NEU), ("월별 탐욕 비율 오차(%p)", [m["ratio_err"]["mean"] * 100 for m in MV3], GREED)], ylabel="%", fmt="{:.1f}", labels=True, legend=dict(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=3))
 CH["posts_dir"] = dict(type="bar", cats=["평소(1.25배 미만)", "1.25~2배", "2배 이상"],
                        series=[("하락일", [dirv[("하락일", c)] for c in ["평소(1.25배 미만)", "1.25~2배", "2배 이상"]], FEAR),
                                ("상승일", [dirv[("상승일", c)] for c in ["평소(1.25배 미만)", "1.25~2배", "2배 이상"]], GREED)],
@@ -83,7 +94,7 @@ add(kind="abc", section="", title="한 장 요약",
     how=("② 만든 방법", f"LLM이 글 2.9만 건의 감성을 판정하고, 그 판정으로 학습한 분류 모델이 나머지 글 전체를 판정(판정한 글 기준 정확도 {ACC_NEW:.0f}%)"),
     found=("③ 확인한 것", [
         ("주가가 먼저 움직이고, 글이 따라간다", "주가가 오른 날은 그날 글이 낙관적으로 바뀐다"),
-        ("밤사이 글 분위기는 다음 날 시가에만 반영된다", f"밤 분위기가 1표준편차 좋으면 시가 {R['dfe_lead_gap']['Snz']['b']:+.2f}%p(그날 시장 전체 움직임을 뺀 값). 장이 열린 뒤엔 오히려 조금 되돌린다"),
+        ("밤사이 글 분위기는 다음 날 시가에만 반영된다", f"밤 분위기가 1표준편차 좋으면 시가 {R['dfe_lead_gap']['Snz']['b']:+.2f}%p(그날 시장 전체 움직임을 뺀 값). {AFTER_OPEN}"),
         ("글은 낙관적인데 개인은 판다", f"글이 가장 낙관적인 날 개인은 순매도({q5[-1]['priv']:+.1f}%), 기관 · 외국인은 순매수({q5[-1]['instfrgn']:+.1f}%). 말과 행동이 반대")]))
 
 # 1 개념
@@ -130,11 +141,13 @@ add(kind="chart", chart="hour", section="02 데이터", title="글을 어느 거
     bullets=["대체거래소 거래가 20:00까지 열려 하루 경계를 20:00으로 잡았다", "20:00 이후 글과 휴장일 글 → 다음 거래일", "주간 = 당일 09:00~20:00, 야간 = 전일 20:00~당일 09:00", "남색 막대가 야간 시간대"])
 
 # 3 감성
-add(kind="section", num="03", title="감성 분석", sub="1,257만 건을 어떻게 판정했나")
+add(kind="section", num="03", title="감성 분석", sub=f"{man(N_POSTS)} 건을 어떻게 판정했나")
 add(kind="labels", section="03 감성 분석", title="감성 = 이 종목 주가를 두고 품은 기대와 두려움",
     lead="글쓴이의 기분이 아니라 이 종목 주가에 대한 기대(탐욕)와 두려움(공포)을 본다. 물려서 하는 한탄 · 분노는 공포, 못 산 아쉬움은 탐욕으로 친다",
     ex=[("“오늘 기분 최악인데 이 종목은 간다”", "탐욕", GREED, "기분은 나쁘지만 전망은 상승"), ("“손절하고 나니 속이 시원하다”", "공포", FEAR, "기분은 좋지만 전망은 하락"),
         ("“내일 실적 발표 있네요”", "중립", NEU, "방향 없는 정보 전달"), ("“지금 사도 되나요?”", "중립", NEU, "질문 · 확신 없음")],
+    find=None if A8 is None else [f"판정한 글 {A8['n']:,}건에 감정을 따로 붙여 보니, 공포 글은 불안 · 패닉 {A8['fear_scared']:.0f}%, 분노 {A8['fear_anger']:.0f}%, 후회 {A8['fear_regret']:.0f}%였다. 겁먹은 글만이 아니라 이 종목에 대한 부정적 전망 전체를 공포로 센다",
+          f"탐욕 글은 {A8['greed_hope']:.0f}%가 기대 · 흥분이다"],
     note="예시 문장은 설명을 위해 만든 문장이다. 판정 기준은 반어 · 자조 · 혼합 의견 규칙까지 11개 규칙으로 정했다.")
 add(kind="cost", section="03 감성 분석", title="전부 LLM으로 읽으면",
     lead="비용(약 $195)보다 시간과 재현성이 문제다. 새 글이 들어올 때마다 다시 판정해야 하고, 같은 판정을 다시 내기 어렵다",
@@ -142,16 +155,16 @@ add(kind="cost", section="03 감성 분석", title="전부 LLM으로 읽으면",
           ("전체 시간", f"{N_POSTS:,} × 0.42초 = {SEC_SECS:,.0f}초 ≈ {DAYS_SEQ:.0f}일 (한 줄로 처리할 때)"),
           ("API 비용 추정", f"입력 {IN_TOK/1e8:.1f}억 토큰 → 약 ${IN_TOK/1e6*0.10:,.0f} + 출력 {OUT_TOK/1e8:.1f}억 토큰 → 약 ${OUT_TOK/1e6*0.50:,.0f} = 약 ${COST:,.0f}")],
     note="비용은 글 1건에 입력 약 105토큰 · 출력 약 10토큰, Claude Haiku 5.5 단가(100만 토큰당 입력 $0.10 · 출력 $0.50)로 잡은 추정치다. 새 글이 들어올 때마다 같은 비용이 다시 든다.",
-    vs=[("전부 LLM", f"약 {DAYS_SEQ:.0f}일"), ("실제 방법", f"LLM 2.9만 건 + 모델 적용 {APPLY_MIN:.0f}분")])
+    vs=[("전부 LLM", f"약 {DAYS_SEQ:.0f}일"), ("실제 방법", f"LLM 2.9만 건 + 모델 적용 {APPLY_HR:.1f}시간")])
 add(kind="flow", section="03 감성 분석", title="실제 방법: LLM으로 가르치고, 모델로 전부 읽는다",
     lead="LLM은 표본만 판정하고, 그 판정으로 학습한 분류 모델이 전체를 읽는다",
     steps=[("① 표본", "2년 글에서 종목 · 월마다 같은 수로 5.9만 건"), ("② LLM 판정", "Claude Haiku가 기준표대로 29,000건 판정 (최근 1년 2.3만 + 이전 1년 0.6만)"),
-           ("③ 학습", "본문 글자 조각 · 단어, 부모 글, 매수 · 매도 인증, 보유 여부 → 로지스틱 회귀"), ("④ 기준점", f"확률 0.7 이상일 때만 탐욕 · 공포로 판정 (전체 글의 약 {APPLY_DEC*100:.0f}%)"), ("⑤ 전체 적용", f"{man(N_POSTS)} 건을 {APPLY_MIN:.0f}분에 분류")],
-    bullets=["글자 조각을 쓴 이유: 띄어쓰기가 엉망이고 은어가 많은 글도 조각 단위로는 잡힌다", "부모 글을 함께 읽어 '저도요' 같은 대댓글도 판정하고, 단어 특징으로 '안 오르다' 같은 부정 표현을 구분한다", "판정하지 못한 글은 중립으로 센다. 그래야 전체 글 수가 분모로 남는다", "키워드 71개는 분류에 쓰지 않고, 지수의 '키워드 강도' 지표에만 쓴다"])
+           ("③ 학습", "한국어 댓글로 미리 학습된 언어 모델(KcELECTRA)을 LLM 판정으로 추가 학습. 입력은 본문 + 부모 글, 매수 · 매도 인증 · 보유 표시"), ("④ 기준점", f"확률 0.7 이상일 때만 탐욕 · 공포로 판정 (전체 글의 약 {APPLY_DEC*100:.0f}%)"), ("⑤ 전체 적용", f"{man(N_POSTS)} 건을 노트북 GPU로 {APPLY_HR:.1f}시간에 분류")],
+    bullets=["언어 모델을 쓴 이유: 띄어쓰기가 엉망이고 은어 · 반어가 많은 글도 문맥으로 읽는다. 글자 조각 · 단어를 세는 모델보다 판정이 늘고 오차가 줄었다", "부모 글을 함께 읽어 '저도요' 같은 대댓글도 판정한다", "판정하지 못한 글은 중립으로 센다. 그래야 전체 글 수가 분모로 남는다", "키워드 71개는 분류에 쓰지 않고, 지수의 '키워드 강도' 지표에만 쓴다"])
 add(kind="chart", chart="perf", section="03 감성 분석", title="분류 모델 성능",
-    lead="부모 글 · 단어 · 인증 · 보유를 더하니 더 많은 글을 판정하고, 월별 탐욕 비율 오차가 줄었다",
+    lead="입력을 늘린 것보다 모델을 사전학습 언어 모델로 바꾼 효과가 컸다. 판정하는 글이 크게 늘고 월별 탐욕 비율 오차가 줄었다",
     bullets=["정확도 = 판정한 글 가운데 LLM 판정과 같은 비율. 29개 묶음을 5무리로 나눠 학습에 안 쓴 무리로 채점(5겹 평균)",
-             f"최종 모델: {MV_NEW['decided']['mean']*100:.0f}%를 판정했고 그 안에서 정확도 {ACC_NEW:.0f}%. 월별 탐욕 비율 오차 {MV_OLD['ratio_err']['mean']*100:.1f} → {MV_NEW['ratio_err']['mean']*100:.1f}%p, 5겹 모두 줄어듦",
+             f"최종 모델: {MV_NEW['decided']['mean']*100:.0f}%를 판정했고 그 안에서 정확도 {ACC_NEW:.0f}%. 월별 탐욕 비율 오차 {MV_D['ratio_err']['mean']*100:.1f} → {MV_NEW['ratio_err']['mean']*100:.1f}%p, 5겹 중 {A9_BETTER}겹에서 줄어듦",
              "키워드 규칙만으로는 데이터를 늘려도 정확도 68%에서 멈춤",
              f"전체 적용 결과: 판정 {APPLY_DEC*100:.0f}%, 그중 탐욕 {APPLY_GREED*100:.0f}%"])
 
@@ -255,18 +268,18 @@ add(kind="chart", chart="crash", section="4-2 투자자별 수급 ↔ 심리", k
              f"급락 전 5일 평균: 외국인 {pre['frgn']:+.1f}% (평소 {base['frgn']:+.1f}%), 개인 {pre['priv']:+.1f}% (평소 {base['priv']:+.1f}%), 기관 {pre['inst']:+.1f}% (평소 {base['inst']:+.1f}%)",
              f"커뮤니티 심리 S: 평소 {base['S']:+.3f} → 급락 전 5일 {pre['S']:+.3f} → 급락일 {cp[5]['S']:+.3f}",
              f"기관이 급락 전에 산 섹터 vs 판 섹터: 급락일 {cs['top_day']:+.1f}% vs {cs['bot_day']:+.1f}%, 이후 5일 {cs['top_after']:+.1f}% vs {cs['bot_after']:+.1f}% → 뚜렷한 차이 없음",
-             f"급락일이 {cs['n']}일뿐이라 참고용이다"])
+             f"급락일이 {cs['n']}일뿐이라 무작위 날짜와 견줬다(급락 앞뒤 10일 제외, {PLC_N:,}번): 외국인 순매도는 " + ("무작위보다 컸고" if PLC["frgn"]["p_lo"] < 0.05 else "무작위와 뚜렷이 다르지 않았고") + f"(p={PLC['frgn']['p_lo']:.2f}), 개인 순매수는 " + ("무작위보다 컸다" if PLC["priv"]["p_hi"] < 0.05 else "뚜렷하지 않았다") + f"(p={PLC['priv']['p_hi']:.2f})"])
 add(kind="chart", chart="dn_gap", section="4-3 선행 · 후행", key="dn", title="다음 날 시가를 설명하는 건 낮 글이 아니라 밤 글이다",
     lead="다음 날 시가와 함께 움직이는 건 밤 글이다. 낮 글의 정보는 밤 글에 이미 들어 있다",
     bullets=[f"야간 심리 1σ ↑ → 당일 시가 갭 {R['dfe_lead_gap']['Snz']['b']:+.2f}%p (t={R['dfe_lead_gap']['Snz']['t']:.1f}), 그날 시장 전체 움직임을 뺀 값",
-             f"시장 움직임을 빼지 않으면 {R['daynight_lead_gap']['Snz']['b']:+.2f}%p. 차이는 밤사이 시장 전체 재료가 글과 시가를 함께 움직인 몫",
+             f"시장 움직임을 빼지 않으면 {R['daynight_lead_gap']['Snz']['b']:+.2f}%p, 밤사이 미국 증시(S&P 500)만 통제해도 {USG['Snz']['b']:+.2f}%p (t={USG['Snz']['t']:.1f}). 차이는 밤사이 시장 전체 재료가 글과 시가를 함께 움직인 몫",
              f"전일 주간 심리는 야간 심리와 함께 넣으면 {R['dfe_lead_gap']['Sd1z']['b']:+.2f}%p (t={R['dfe_lead_gap']['Sd1z']['t']:.1f})",
              f"5분위 사이 시가 갭 차이: 야간 {nq[-1]['gap']-nq[0]['gap']:.1f}%p, 주간 {dq[-1]['gap']-dq[0]['gap']:.1f}%p",
              f"{DN['stocks']}종목 · {DN['days']}거래일, 밤 글 5건 이상인 {DN['rows']:,}개 종목·일. 종목 · 날짜 고정효과, 전일 수익률 통제. 그래프는 단순 평균"])
 add(kind="chart", chart="gap_intra", section="4-3 선행 · 후행", key="gap", title="밤 글의 효과는 시가에서 끝난다",
-    lead="밤 글이 낙관적일수록 높게 시작하지만, 시가 이후 장중엔 효과가 없고 오히려 조금 되돌린다",
+    lead="밤 글이 낙관적일수록 높게 시작하지만, 시가 이후 장중엔 효과가 없" + ("고 오히려 조금 되돌린다" if INTRA_SIG else "다"),
     bullets=[f"상승 출발 비율: 가장 공포인 밤 {nq[0]['up_gap']*100:.0f}% → 가장 탐욕인 밤 {nq[-1]['up_gap']*100:.0f}%",
-             f"장중(시가→종가) 효과 {R['dfe_lead_intra']['Snz']['b']:+.2f}%p (t={R['dfe_lead_intra']['Snz']['t']:.1f}): 작은 되돌림",
+             f"장중(시가→종가) 효과 {R['dfe_lead_intra']['Snz']['b']:+.2f}%p (t={R['dfe_lead_intra']['Snz']['t']:.1f}): {'작은 되돌림' if INTRA_SIG else '유의하지 않음'}",
              f"08:00 프리마켓 전 글만 써도 시가 갭 {R['dfe_lead_gap_0800']['Sn8z']['b']:+.2f}%p (t={R['dfe_lead_gap_0800']['Sn8z']['t']:.1f})",
              f"대체거래소 출범(25-03) 전 구간만 보면 {R['dfe_lead_gap_prenxt']['Snz']['b']:+.2f}%p (t={R['dfe_lead_gap_prenxt']['Snz']['t']:.1f}, {R['dfe_lead_gap_prenxt']['n']:,}건)",
              "분봉이 없어 '장초'는 시가 갭(전일 종가 → 당일 시가)으로 봤다"])
@@ -314,6 +327,13 @@ add(kind="chart", chart="c6", section="4-4 보완 분석", key="c6", title="공�
              f"주가: 공포 글 비율 1σ↑ 날 {c6[0]['ret_f']:+.2f}%p, 이후 5일 누적 {c6[5]['ret_f']:+.2f}%p (t={c6[5]['ret_f_t']:.1f}). 탐욕은 그날 {c6[0]['ret_g']:+.2f}%p 뒤 유의한 움직임 없음",
              "충격 뒤 0~10일 각각에 같은 회귀를 반복했다(종목 · 날짜 고정효과, 전일 수익률 통제)"])
 b5d = XR["b5_desc"]; hv = XR["b5_hold_vs_non"]
+def _b5_next():   # 다음 날 결과 중 5% 유의한 것만 밝혀 적는다
+    T = {"수익률": {"매수 인증 비율": XR["b5_buy_fwd1"]["buy_z"], "보유자 심리": hv["fwd1"]["hz"], "비보유자 심리": hv["fwd1"]["nz"]},
+         "수급": {"매수 인증 비율": XR["b5_buy_priv_n1"]["buy_z"], "보유자 심리": hv["priv_n1"]["hz"], "비보유자 심리": hv["priv_n1"]["nz"]}}
+    sig = {w: [(k, v) for k, v in d.items() if abs(v["t"]) >= 1.96] for w, d in T.items()}
+    if not any(sig.values()): return "다음 날 수익률 · 수급은 인증과 보유 어느 쪽도 설명하지 못했다"
+    return ". ".join(f"다음 날 {w}은 " + (" · ".join(f"{k}({v['b']:+.2f}%p, t={v['t']:.1f})" for k, v in sig[w]) + "만 유의했다" if sig[w] else "인증과 보유 어느 쪽도 설명하지 못했다") for w in ("수급", "수익률"))
+B5_NEXT = _b5_next()
 add(kind="grid", section="4-4 보완 분석", key="b5", title="커뮤니티 안에서도 말과 행동은 반대다",
     lead="심리가 탐욕적인 날일수록 매수 인증은 줄고 매도 인증이 는다. 그리고 인증 행동은 실제 개인 수급과 같은 방향이다",
     tables=[{"head": ["관계 (그날 수익률 통제)", "효과", "t"], "colw": [4.0, 1.6, 0.9],
@@ -326,20 +346,25 @@ add(kind="grid", section="4-4 보완 분석", key="b5", title="커뮤니티 안�
     bullets=[f"매수 · 매도 인증 글은 전체의 {b5d['badge_rate']:.1f}%. 인증 글이 5건 이상인 {b5d['days_with_badges']:,}개 종목·일로 계산했다",
              "커뮤니티가 탐욕적인 날 인증 글은 매도 쪽으로 기운다. 글로 하는 말과 인증으로 보이는 행동이 커뮤니티 안에서도 엇갈린다",
              "매수 인증 비율은 그날 실제 개인 순매수와 함께 움직인다. 인증은 실제 매매를 비추는 거울에 가깝다",
-             f"글의 {b5d['hold_share']:.0f}%가 보유자 글이고, 보유자 심리가 높을수록 개인은 더 판다. 다음 날 수익률 · 수급은 인증과 보유 어느 쪽도 설명하지 못했다",
+             f"글의 {b5d['hold_share']:.0f}%가 보유자 글이고, 보유자 심리가 높을수록 개인은 더 판다. {B5_NEXT}",
              "종목 · 날짜 고정효과, 그날 수익률을 통제했다"])
+_b4 = {"다음 날 초과수익률": XR["b4_fwd1"]["Sres_z"], "이후 5일 초과수익률": XR["b4_fwd5"]["Sres_z"], "다음 날 개인 순매수": XR["b4_priv_n1"]["Sres_z"], "다음 날 거래량": XR["b4_vr_n1"]["Sres_z"]}
+_b4s = [(k, v) for k, v in _b4.items() if abs(v["t"]) >= 1.96]
+_b4b = [(k, v) for k, v in _b4.items() if 1.9 <= abs(v["t"]) < 1.96]   # 반올림하면 t=2.0으로 보이는 경계값은 p를 밝힌다
+B4_NOTE = ("모두 5% 유의수준에 못 미친다" + ("(" + " · ".join(f"{k}은 p={v['p']:.3f}으로 경계" for k, v in _b4b) + ")" if _b4b else "") + ".") if not _b4s else " · ".join(f"{k}(t={v['t']:.1f})" for k, v in _b4s) + "만 5% 유의수준을 겨우 넘고 나머지는 못 미친다."
 add(kind="bullets2", section="4-4 보완 분석", key="b4", title="주가로 설명되는 부분을 빼고 남은 심리는 예측력이 약하다",
     lead=f"그날 심리의 {XR['b4_fit']['r2']*100:.0f}%는 그날 · 전날 주가와 시장 움직임으로 설명된다. 나머지가 '잔차 심리'다",
     bullets=[f"주가가 1% 넘게 올랐는데 잔차 심리가 하위 20%인 날: {XR['b4_cases']['up_but_fear']*100:.1f}%, 1% 넘게 내렸는데 상위 20%인 날: {XR['b4_cases']['down_but_greed']*100:.1f}%",
              f"잔차 심리 1σ ↑ → 다음 날 초과수익률 {fx(reg('b4_fwd1', 'Sres_z'))}, 이후 5일 {fx(reg('b4_fwd5', 'Sres_z'))}",
              f"잔차 심리 1σ ↑ → 다음 날 개인 순매수 {fx(reg('b4_priv_n1', 'Sres_z'))}, 거래량 {fx(reg('b4_vr_n1', 'Sres_z'), '')}",
-             "모두 5% 유의수준에 못 미친다. 심리의 정보는 대부분 주가와 함께 이미 움직인 부분에 있다"])
+             B4_NOTE + " 심리의 정보는 대부분 주가와 함께 이미 움직인 부분에 있다"])
 add(kind="chart", chart="c5", section="4-4 보완 분석", key="c5", title="커뮤니티 변수를 더하면 다음 날 거래량 · 변동폭 · 개인 수급 예측이 나아진다",
-    lead="주가 방향은 못 맞히지만, 내일 얼마나 움직이고 개인이 얼마나 살지는 더 잘 맞힌다",
+    lead="다음 날 수익률은 못 맞히지만, 내일 시가가 오를지와 얼마나 움직이고 개인이 얼마나 살지는 더 잘 맞힌다",
     bullets=[f"{XR['c5_test'][0]} ~ {XR['c5_test'][1]} 매달, 그 전 자료로만 학습해 다음 달을 예측했다 (그래디언트 부스팅)",
              "시장 자료: 그날 · 전날 수익률, 시장 수익률, 거래량 비율, 변동폭, 개인 · 기관 · 외국인 순매수",
              "커뮤니티 변수: 심리, 키워드 강도, 관심도, 의견 갈림, 밤 심리, 탐욕 · 공포 비율, 잔차 심리, 글 수",
              "예측 오차 차이 검정(Diebold–Mariano): " + ", ".join(f"{C5N[k].replace('다음 날 ', '')} t={c5[k]['dm_gbm']['t']:.1f}" for k in C5N) + " — 모두 개선",
+             f"내일 시가가 오를지(장 열기 전 정보만): 전날 시장 자료 + 밤사이 미국 증시에 밤사이 심리를 더하면 AUC {XR['c5_open']['mkt_logit']['auc']:.2f} → {XR['c5_open']['com_logit']['auc']:.2f} (0.5면 동전 던지기, t={XR['c5_open']['dm_logit']['t']:.1f})",
              "설명력 자체는 작다. 매매 신호가 아니라 '내일 얼마나 붐빌지'를 알려 주는 정도다"])
 
 # 5 정리
@@ -349,8 +374,29 @@ add(kind="summary", section="05 정리", title="정리",
     cards=[("개념", "RSI · CNN 지수처럼 '극단'을 읽는 지표를, 종목 단위 커뮤니티 글로 만들었다"),
            ("데이터 · 감성", f"45종목 · 2년 · {man(N_POSTS)} 건. LLM 2.9만 건으로 가르친 모델이 전체를 판정(판정한 글 기준 정확도 {ACC_NEW:.0f}%)"),
            ("수급", "탐욕인 날·섹터에서 개인은 팔고 기관 · 외국인은 산다. 분기로 보면 개인은 내린 섹터, 기관은 오른 섹터를 샀다. 글이 몰린 하락일엔 개인이 사들인다"),
-           ("선행 · 후행", f"밤 심리는 시가 갭만 설명({R['dfe_lead_gap']['Snz']['b']:+.2f}%p/σ, 시장 움직임 제외). 장중엔 오히려 조금 되돌린다. 주가가 오르면 글이 따라 낙관적으로 바뀐다")],
-    bullets=["매매 신호가 아니라 '심리 온도계'로 쓰는 것이 맞다. 극단적 공포를 매수 기회로 볼 근거는 없었다", "밤사이 공포가 큰 종목은 낮게 시작할 가능성이 높다는 정도까지만 말할 수 있다", "대신 다음 날 거래량 · 변동폭 · 개인 수급을 예측하는 데는 보탬이 된다"])
+           ("선행 · 후행", f"밤 심리는 시가 갭만 설명({R['dfe_lead_gap']['Snz']['b']:+.2f}%p/σ, 시장 움직임 제외). {'장중엔 오히려 조금 되돌린다' if INTRA_SIG else '장중엔 더 이어지지 않는다'}. 주가가 오르면 글이 따라 낙관적으로 바뀐다")],
+    bullets=["매매 신호가 아니라 '심리 온도계'로 쓰는 것이 맞다. 극단적 공포를 매수 기회로 볼 근거는 없었다", "밤사이 공포가 큰 종목은 낮게 시작할 가능성이 높다는 정도까지만 말할 수 있다", "대신 다음 날 시가 방향 · 거래량 · 변동폭 · 개인 수급을 예측하는 데는 보탬이 된다"])
+al1, al2, al3 = XR["alert_r1"], XR["alert_r2"], XR["alert_r3"]
+fa = lambda r, y, u="%p": f"{r[y]['b']:+.2f}{u}" if abs(r[y]['b']) < 1 else f"{r[y]['b']:+.1f}{u}"
+add(kind="grid", section="05 정리", key="alerts", title="알림으로 써 보면 수급과 시가까지는 맞힌다",
+    lead="알림 규칙 3개를 2년치 실제 데이터로 검증했다. 비교군 대비 차이, 종목 · 날짜 고정효과",
+    tables=[{"head": ["알림 규칙", "켜진 날", "결과", "t"], "colw": [3.6, 0.9, 3.0, 0.7],
+             "rows": [["개인 매수 집중 (하락일 + 글 2배 이상)", f"{al1['n_on']:,}", f"그날 개인 순매수 {fa(al1, 'priv')}", f"{al1['priv']['t']:.1f}"],
+                      ["", "", f"다음 날 개인 순매수 {fa(al1, 'priv_n1')}", f"{al1['priv_n1']['t']:.1f}"],
+                      ["말과 행동이 다름 (지수 75 이상 + 개인 순매도)", f"{al2['n_on']:,}", f"다음 날 개인 순매수 {fa(al2, 'priv_n1')}", f"{al2['priv_n1']['t']:.1f}"],
+                      ["", "", f"다음 날 초과수익률 {fa(al2, 'fwd1')}", f"{al2['fwd1']['t']:.1f}"],
+                      ["약세 출발 (밤 심리 하위 15%)", f"{al3['n_on']:,}", f"그날 시가 갭 {fa(al3, 'gap')}", f"{al3['gap']['t']:.1f}"],
+                      ["", "", f"그날 장중(시가→종가) {fa(al3, 'intra')}", f"{al3['intra']['t']:.1f}"]]}],
+    bullets=["비교군: 글이 평소 수준인 하락일 / 탐욕이면서 개인도 산 날 / 밤 심리가 중간(15~85%)인 날",
+             "약세 출발 알림은 시가까지만 맞는다. 장중엔 " + ("오히려 일부 되돌린다" if al3["intra"]["b"] > 0 and abs(al3["intra"]["t"]) >= 1.96 else "차이가 없다"),
+             f"말과 행동이 다름 알림은 탐욕인 날의 {al2['share_on']*100:.0f}%에서 켜져 알림으로 쓰기엔 너무 잦다. 이후 수익률 차이도 없다",
+             "수급과 시가를 미리 보는 온도계 알림으로는 쓸 수 있지만, 매매 신호는 아니다"])
+add(kind="shot", section="05 정리", key="dash", title="활용 예시: 커뮤니티 심리 계측기",
+    lead="시장 심리, 오늘 켜진 알림, 섹터 지도를 한 화면에 보여 준다",
+    img=base64.b64encode(open(os.path.join(HERE, "assets/dashboard_home.png"), "rb").read()).decode(),
+    bullets=["화면은 최근 140거래일 실제 데이터 (2026-11-11 20:00 마감 기준)", "탭은 시장 홈 · 종목 상세 · 장전 브리핑 세 가지",
+             "알림 카드마다 '이런 날 과거에는' 기록을 붙인다. 예: 약세 출발 알림 1,287번 중 869번 하락 출발",
+             "매매 권유가 아니라 분위기를 읽는 도구로 만들었다"])
 add(kind="bullets2", section="05 정리", title="한계",
     lead="숫자를 읽을 때 함께 봐야 할 것",
     bullets=["라벨 품질: 정답은 LLM 판정이고 사람 검수를 거치지 않았다", "대표성: 커뮤니티에 글을 쓰는 사람이 전체 투자자를 대표하지 않는다",
@@ -399,7 +445,7 @@ toc["items"] = [(g, [(by[k]["title"], S.index(by[k]) + 1) for k in keys]) for g,
 
 
 # ---- 윤문 결과 적용: humanize_map.json(원문 → 윤문) 이 있으면 슬라이드 문장을 바꿔 끼운다 ----
-PROSE_KEYS = ["title", "lead", "sub", "note", "bullets"]
+PROSE_KEYS = ["title", "lead", "sub", "note", "bullets", "find"]
 def prose_walk(fn):
     for x in S:
         for k in PROSE_KEYS:
@@ -492,10 +538,12 @@ def slide_html(i, s):
     elif k == "sectors":
         b = '<div class="secgrid">' + "".join(f'<div class="sc"><b>{E(t)}</b><span>{E(" · ".join(n))}</span></div>' for t, n in s["sectors"]) + "</div>"
     elif k == "labels":
-        b = '<div class="exs">' + "".join(f'<div class="ex"><q>{E(t[1:-1])}</q><em style="background:#{c}">{E(l)}</em><span>{E(w)}</span></div>' for t, l, c, w in s["ex"]) + f'</div><p class="note">{E(s["note"])}</p>'
+        b = '<div class="exs">' + "".join(f'<div class="ex"><q>{E(t[1:-1])}</q><em style="background:#{c}">{E(l)}</em><span>{E(w)}</span></div>' for t, l, c, w in s["ex"]) + '</div>' + (f'<div class="box find">{ul(s["find"])}</div>' if s.get("find") else "") + f'<p class="note">{E(s["note"])}</p>'
     elif k == "cost":
         b = '<div class="two"><div class="calc">' + "".join(f'<div class="step"><b>{E(a)}</b><span>{E(c)}</span></div>' for a, c in s["calc"]) + f'</div><div><div class="vs">' + \
             "".join(f'<div class="stat"><div class="lab">{E(a)}</div><div class="big">{E(c)}</div></div>' for a, c in s["vs"]) + f'</div><p class="note">{E(s["note"])}</p></div></div>'
+    elif k == "shot":
+        b = f'<div class="two c"><div class="shot"><img alt="" src="data:image/png;base64,{s["img"]}"></div><div class="box">{ul(s["bullets"])}</div></div>'
     elif k == "flow":
         b = '<div class="flow">' + "".join(f'<div class="fs"><b>{E(a)}</b><span>{E(c)}</span></div>' for a, c in s["steps"]) + f'</div>{ul(s["bullets"])}'
     elif k == "chart":
@@ -545,7 +593,7 @@ li:before{{content:"";position:absolute;left:0;top:.62cqw;width:.5cqw;height:.5c
 .sec .num{{font-size:7cqw;font-weight:800;color:#{GREED};line-height:1}} .sec h1{{margin-top:1cqw}}
 .two{{display:grid;grid-template-columns:1.15fr 1fr;gap:2.6cqw;align-items:center;min-height:0}} .two.c{{grid-template-columns:1.45fr 1fr}} .two.w{{grid-template-columns:1.4fr 1fr}}
 .chart{{height:30cqw;min-height:0}} .chart svg{{display:block}}
-.box{{background:var(--panel);border-radius:.8cqw;padding:1.8cqw}} .box.big li{{font-size:1.55cqw}}
+.box{{background:var(--panel);border-radius:.8cqw;padding:1.8cqw}} .box.find{{margin-top:1.2cqw;padding:1.2cqw 1.8cqw}} .shot img{{width:100%;height:auto;display:block;border-radius:.8cqw;box-shadow:0 .3cqw 1.2cqw rgba(0,0,0,.14)}} .box.big li{{font-size:1.55cqw}}
 .stats4{{display:grid;grid-template-columns:repeat(4,1fr);gap:1.4cqw}} .stats3{{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4cqw}}
 .stat{{background:var(--panel);border-radius:.8cqw;padding:1.8cqw 1.6cqw}} .big{{font-size:3.3cqw;font-weight:800;color:var(--ink);line-height:1.1}}
 .lab{{font-size:1.25cqw;margin-top:.8cqw;line-height:1.4;font-weight:600}} .cap{{font-size:1.05cqw;color:var(--muted);margin-top:.6cqw;line-height:1.4}}

@@ -1,4 +1,4 @@
-"""기획안 4절 지수 만들기. 입력: apply_out3/ (종목·30분 집계, 모델 v2 = A4+A5, 김정기 형식 원문에 적용), trading_days.csv (KRX 거래일, pykrx 삼성전자 일봉 날짜).
+"""기획안 4절 지수 만들기. 입력: apply_out4/ (종목·30분 집계, 모델 v3 = KcELECTRA 미세조정(A9), 김정기 형식 원문에 적용), trading_days.csv (KRX 거래일, pykrx 삼성전자 일봉 날짜).
 거래일 배정: 그날 20:00 이전 글 -> 그 거래일, 20:00 이후 글 -> 다음 거래일 (주말·휴장일 글도 다음 거래일로).
 장전(밤사이) 감성: 전 거래일 20:00 ~ 당일 09:00(정규장 개장) 전 글. 글이 적으면 그 종목 평소 감성(직전 20거래일 일간 (긍정-부정)/전체 평균)으로 10건분 당김.
 출력: index_out/daily_stock.csv, daily_sector.csv, daily_market.csv
@@ -33,7 +33,7 @@ def to_tday(slot):   # 'YYYY-MM-DDTHH:MM' -> (거래일, 장전 여부)
     return td, pre
 
 rows = []
-for f in sorted(glob.glob(f"{D}/apply_out3/*.csv")):
+for f in sorted(glob.glob(f"{D}/apply_out4/*.csv")):
     code = os.path.basename(f).split("_")[0]
     x = pd.read_csv(f)
     if x.empty: continue

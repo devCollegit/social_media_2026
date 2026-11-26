@@ -1,4 +1,4 @@
-"""발표용 분석 (4장). 입력: apply_out3/ (종목·30분 집계), index_out/daily_stock.csv·daily_sector.csv, ohlcv.json, krx_index.json, krx_investor.json, trading_days.csv
+"""발표용 분석 (4장). 입력: apply_out4/ (종목·30분 집계), index_out/daily_stock.csv·daily_sector.csv, ohlcv.json, krx_index.json, krx_investor.json, trading_days.csv
 4-1 글 수 ↔ 개인 수급 / 4-2 투자자별 수급 vs 커뮤니티 심리(종목·섹터, 급락일 전후) / 4-3 주간 vs 야간 감성의 선행·후행 (장초 = 시가 갭)
 출력: pres_results.json
 사용: uv run --python 3.10 --with pandas --with statsmodels python analysis_presentation.py"""
@@ -24,7 +24,7 @@ def to_tday(slot):   # build_index.py와 같은 규칙: 20:00 이후 → 다음 
     return td, ("night" if (td != d or hm < "09:00") else "day")
 
 rows, hours = [], []
-for f in sorted(glob.glob("apply_out3/*.csv")):
+for f in sorted(glob.glob("apply_out4/*.csv")):
     x = pd.read_csv(f)
     if x.empty: continue
     x["code"] = os.path.basename(f).split("_")[0]
@@ -226,5 +226,30 @@ for k in ["posts_total", "posts_day_share", "posts_vs_priv_bins", "posts_vs_priv
 # 급락 프로필 비교 기준: 전체 거래일 평균 (45종목 합, 거래대금 대비 %)
 R["flow_baseline"] = {w: float(allf[w].mean()) for w in ["priv", "inst", "frgn", "S"]}
 R["crash_pre5_mean"] = {w: float(pd.DataFrame(prof).query("-5<=k<=-1")[w].mean()) for w in ["priv", "inst", "frgn", "S"]}
+
+# ---------- 김동우 v2 반영 ① C8 위약 검정: 급락 전 5일 수급이 무작위로 고른 같은 수의 날짜보다 특이한가 ----------
+rng = np.random.default_rng(20261126)
+ci = [fd.index(x) for x in crash if x in fd and fd.index(x) >= 5]
+near = lambda evs: {j for x in evs if x in fd for j in range(max(0, fd.index(x) - 10), fd.index(x) + 11)}
+POOLS = {"all": np.arange(5, len(fd)),                                                          # 기본: 모든 거래일
+         "excl_events": np.array([i for i in range(5, len(fd)) if i not in near(crash)]),          # 이 9번의 급락 앞뒤 10일만 뺌
+         "excl_all_crash": np.array([i for i in range(5, len(fd)) if i not in near(crash_all)])}    # 김동우 v2 방식: 모든 −3% 날 앞뒤 10일을 뺌(평온한 날만)
+pl = {}
+for pool, ok_i in POOLS.items():
+    pl[pool] = {"pool_days": int(len(ok_i))}
+    for w in ["priv", "inst", "frgn"]:
+        pre5 = allf[w].rolling(5).mean().shift(1).to_numpy()        # i번째 날 직전 5거래일 평균
+        obs = float(np.nanmean(pre5[ci]))
+        draws = np.array([np.nanmean(pre5[rng.choice(ok_i, len(ci), replace=False)]) for _ in range(5000)])
+        pl[pool][w] = {"obs": obs, "rand_mean": float(draws.mean()), "p_hi": float((draws >= obs).mean()), "p_lo": float((draws <= obs).mean())}
+R["crash_placebo"] = pl | {"n_events": len(ci), "draws": 5000}
+# ---------- 김동우 v2 반영 ② C1 미국 증시 통제: 날짜 효과 없는 시가 갭 회귀에 밤사이 미국 수익률(S&P 500)을 더함 ----------
+# us_overnight.csv: 한국 거래일마다 그날 09시 전에 끝난 미국 장 수익률(%). 김동우/fear_greed_v2/toss_fear_greed_v2/fetch_us_overnight.py (FRED 종가)로 만든다
+if os.path.exists("us_overnight.csv"):
+    usr = pd.read_csv("us_overnight.csv", dtype={"date": str}).set_index("date").us_ret
+    d["us_ret"] = d.date.map(usr)
+    R["daynight_lead_gap_us"] = keep(fe("gap ~ Sd1z + Snz + ret_1 + mret_1 + us_ret", d.dropna(subset=["us_ret"])), ["Snz", "us_ret"])
+    print("C1 미국 통제", R["daynight_lead_gap_us"], "| 통제 전", R["daynight_lead_gap"]["Snz"])
+print("C8 위약", R["crash_placebo"])
 json.dump(R, open("pres_results.json", "w"), ensure_ascii=False, indent=1, default=float)
 print("baseline", R["flow_baseline"], "pre5", R["crash_pre5_mean"])

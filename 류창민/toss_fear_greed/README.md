@@ -40,26 +40,33 @@
 | | `train_final.py` | 이전 모델 학습(본문 글자 조각만, 비교용): LLM 판정 29,000건 (최근 1년 23,000 + 이전 1년 6,000) | `model.joblib` |
 | | `eval_quant.py` | 판정을 세는 방식 비교: 확률 합산, 5분류 확률 보정, 보정 집계 vs 확률 0.7 이상 개수. 낫지 않아 지금 방식 유지 | `eval_quant.json` |
 | | `eval_features_cv.py` | 입력 추가 비교(5겹 교차검증): 부모 글 · 대댓글 · 매수/매도 인증 · 보유, 단어(형태소, '안·못' 부정 처리). 월별 탐욕 비율 오차 5.47 → 4.33%p | `eval_features_cv.json` |
-| | `train_final2.py` | 최종 학습: 같은 29,000건, 본문 글자 조각 + 부모 글 글자 조각(가중 0.5) + 단어 + 대댓글 · 인증 · 보유 0/1 → 로지스틱 회귀 | `model_v2.joblib` |
-| 5. 전체 적용 | `apply_all3.py` | 최종 모델로 전체 글을 판정해 종목·30분 단위로 집계. 매수·매도 인증 글 수, 보유자 글 수와 그 탐욕·공포 수도 센다. 원문은 저장하지 않는다 | `apply_out3/` |
+| | `train_final2.py` | 이전 모델 학습(글자 조각 + 부모 글 + 단어 + 대댓글 · 인증 · 보유 → 로지스틱 회귀, 비교용) | `model_v2.joblib` |
+| | `make_a6_batches.py`, `eval_a6_cv.py` | 애매한 글(확률 0.4~0.7) 4,000건 + 글 많은 종목 1,000건을 더 판정해 학습에 더하는 시험. 월별 탐욕 비율 오차가 줄지 않아 쓰지 않음 | `batches/a01~a05`, `eval_a6_cv.json` |
+| | `a9_kcelectra.py` | **최종 모델.** 한국어 댓글로 사전학습된 KcELECTRA(`beomi/KcELECTRA-base-v2022`)를 LLM 판정 29,000건으로 미세조정. `speed`는 속도 측정, `fold0`~`fold4`는 5겹 채점, `final`은 전체 학습. 입력은 [대댓글][매수인증][매도인증][보유] 표시 + 본문 [SEP] 부모 글 | `model_a9/`, `a9_fold*.json` |
+| | `a9_cv_summary.py` | 5겹 결과를 모아 이전 모델과 비교: 월별 탐욕 비율 오차 4.33 → 3.08%p, 판정 비율 35.7 → 59.4% | `a9_cv.json` |
+| 5. 전체 적용 | `apply_all4.py` | 최종 모델로 전체 글을 판정해 종목·30분 단위로 집계(맥북 GPU로 약 6시간). 매수·매도 인증 글 수, 보유자 글 수와 그 탐욕·공포 수도 센다. 원문은 저장하지 않는다. 멈추면 끝난 달부터 이어서 돈다 | `apply_out4/` |
+| | `apply_all3.py` | 이전 모델(`model_v2.joblib`)로 같은 집계 (비교용) | `apply_out3/` |
 | | `apply_all2.py` | 이전 모델(`model.joblib`)로 같은 집계 (비교용) | `apply_out2/` |
-| 6. 지수 | `build_index.py` | `apply_out3/`을 읽어 거래일 배정(20:00 경계), 감성 점수 S = (탐욕 − 공포 + 10 × 그 종목 평소 수준) ÷ (전체 + 10), 60거래일 백분위, 방향·강도 축(주성분 가중치), 국면 | `index_out/` |
+| 6. 지수 | `build_index.py` | `apply_out4/`을 읽어 거래일 배정(20:00 경계), 감성 점수 S = (탐욕 − 공포 + 10 × 그 종목 평소 수준) ÷ (전체 + 10), 60거래일 백분위, 방향·강도 축(주성분 가중치), 국면 | `index_out/` |
 | 7. KRX | `fetch_krx.py` | 종목 일봉과 거래일 달력 (로그인 불필요) | `ohlcv.json` 등 |
 | | `fetch_krx_login.py` | 코스피·코스닥 지수, 투자자별 순매수, 공매도(2025-03-31 재개 이후) (환경 변수 `KRX_ID`·`KRX_PW` 필요) | `krx_index.json`, `krx_investor.json`, `krx_short.json` |
 | 8. 분석 | `analysis_krx.py` | 밤사이 심리 → 다음 날 시가·장중(선행), 주가 → 심리(후행) | `krx_results.json` |
-| | `analysis_presentation.py` | 글 수와 개인 수급, 투자자별 수급과 심리, 급락일 전후, 주간·야간 비교 | `pres_results.json` |
+| | `analysis_presentation.py` | 글 수와 개인 수급, 투자자별 수급과 심리, 급락일 전후(무작위 날짜와 비교하는 위약 검정 포함), 주간·야간 비교(밤사이 미국 증시 통제 포함) | `pres_results.json` |
 | | `analysis_rotation.py` | 분기·월별 섹터 순매수 이동, 대표 12종목 | `rotation_results.json` |
 | | `rotation_keywords.py` | 섹터·분기별 토론글 대표 단어 (단어와 빈도만 저장) | `rotation_keywords.json` |
-| | `analysis_extra.py` | 지수 구간별 이후 성과, 심리 → 다음 날 거래량·변동폭·공매도, 탐욕·공포 반응 경로, 잔차 심리, 다음 날 예측 비교, 커뮤니티 안 인증 · 보유 행동과 실제 수급 | `extra_results.json` |
+| | `analysis_extra.py` | 지수 구간별 이후 성과, 심리 → 다음 날 거래량·변동폭·공매도, 탐욕·공포 반응 경로, 잔차 심리, 다음 날 예측 비교, 커뮤니티 안 인증 · 보유 행동과 실제 수급, 알림 규칙 3개 검증, 다음 날 시가 방향 예측(장 열기 전 정보만) | `extra_results.json` |
+| | `compare_a9.py` | 모델을 바꾸기 전후 결과 파일의 회귀 계수를 모두 비교해 부호·유의성이 바뀐 것을 찾는다 | `a9_compare.json` |
 | 9. 발표자료 | `presentation/build_presentation.py` | 분석 결과로 HTML 발표자료를 만든다 | `.html` |
 | | `presentation/export_pdf.py` | HTML을 PDF로 바꾼다 | `.pdf` |
 
 ## 환경
 
-Python 3.10. 사용한 패키지는 numpy, pandas, scipy, scikit-learn 1.7.2, statsmodels, joblib, kiwipiepy, pykrx, matplotlib, playwright다.
+Python 3.10. 사용한 패키지는 numpy, pandas, scipy, scikit-learn 1.7.2, statsmodels, joblib, kiwipiepy, pykrx, matplotlib, playwright, torch, transformers다. 최종 모델 학습·적용은 GPU(맥북은 MPS)가 있어야 시간이 적당하다.
+
+시가 갭의 미국 증시 통제와 시가 방향 예측은 `us_overnight.csv`(한국 거래일마다 그날 09시 전에 끝난 미국 장 수익률)를 쓴다. `김동우/fear_greed_v2/toss_fear_greed_v2/fetch_us_overnight.py --base <이 폴더>`로 FRED 공개 종가에서 만든다.
 
 ```bash
-uv run --python 3.10 --with scikit-learn==1.7.2 --with joblib --with scipy --with kiwipiepy python train_final2.py
+uv run --python 3.10 --with 'torch>=2.6' --with 'transformers>=4.46,<5' --with numpy python a9_kcelectra.py final
 ```
 
 ## 참고

@@ -13,7 +13,7 @@ idx = json.load(open("krx_index.json"))   # KRX 로그인 자료: 코스피·코
 ohl["KOSPI"], ohl["KOSDAQ"] = idx["KOSPI"], idx["KOSDAQ"]
 KOSDAQ = {"086520","196170","000250","028300","058470","005290","036930","403870","032820","277810","108490","222800"}
 import glob
-COVER = max(open(f).read().strip().split("\n")[-1].split(",")[0] for f in glob.glob("apply_out3/*_2026-*.csv") if open(f).read().strip().count("\n"))   # 집계된 마지막 30분 칸
+COVER = max(open(f).read().strip().split("\n")[-1].split(",")[0] for f in glob.glob("apply_out4/*_2026-*.csv") if open(f).read().strip().count("\n"))   # 집계된 마지막 30분 칸
 live = set(mk.loc[(mk.n_posts > 0) & (mk.date + "T08:30" <= COVER), "date"])   # 그날 09:00 전 글까지 다 모인 거래일만
 s = s[s.date.isin(live)].sort_values(["code", "date"]).copy()
 px = lambda c, d, k: (ohl[c].get(d) or [None]*5)[k]

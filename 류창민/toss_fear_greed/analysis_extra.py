@@ -1,6 +1,7 @@
 """보완 분석 (발표 4-4장). 입력: index_out/daily_stock.csv, ohlcv.json, krx_index.json, krx_investor.json, krx_short.json, sectors.json
 C2 지수 구간·국면별 이후 성과 / C3 심리·글 수 → 다음 날 거래량·변동폭·공매도 / C4 의견 갈림 → 거래량
 C6 탐욕·공포 비율 충격의 0~10일 반응 경로 / B4 잔차 심리(주가로 설명되는 부분을 뺀 심리) / C5 다음 날 수급·거래량·변동폭 예측 비교
+김동우 v2 반영: 알림 규칙 3개 검증, 다음 날 시가 방향 예측(장 열기 전 정보만, us_overnight.csv 필요)
 회귀는 모두 종목·날짜 고정효과, 종목·날짜 이중 군집 표준오차. 출력: extra_results.json
 사용: uv run --python 3.10 --with pandas --with statsmodels --with scikit-learn python analysis_extra.py"""
 import json, os
@@ -129,6 +130,45 @@ for y in ["priv_n1", "vr_n1", "range_n1"]:
     res["n_test"] = int(len(truth)); out[y] = res
 R["c5"] = out; R["c5_test"] = [test_months[0], test_months[-1]]
 
+# ---------- 김동우 v2 반영 ③ 알림 규칙 3개 검증 (규칙은 김동우 v2 alerts_v2.py, 계산은 우리 지수) ----------
+gq = s.groupby("code")
+s["gap"] = (s.open / gq.close.shift(1) - 1) * 100; s["intra"] = (s.close / s.open - 1) * 100   # 시가 갭, 장중(시가→종가)
+def alert(on, ref, ys):   # 알림 켜진 날 vs 비교군: 평균과 종목·날짜 고정효과 차이
+    on, ref = on.fillna(False), ref.fillna(False); d0 = s[on | ref].copy(); d0["on"] = on[on | ref].astype(float)
+    res = {"n_on": int(on.sum()), "n_ref": int(ref.sum()), "share_on": float(on.sum() / max((on | ref).sum(), 1))}
+    for y in ys: res[y] = {"mean_on": float(s.loc[on, y].mean()), "mean_ref": float(s.loc[ref, y].mean())} | keep(fe(f"{y} ~ on", d0), ["on"])["on"]
+    return res
+big, night = s.n_posts >= 20, s.pre_n_posts >= 5
+R["alert_r1"] = alert(big & (s.ret < 0) & (s.interest >= 2), big & (s.ret < 0) & (s.interest < 2), ["priv", "priv_n1"])        # 하락일에 글이 평소의 2배 이상
+R["alert_r2"] = alert(big & (s.direction >= 75) & (s.priv < 0), big & (s.direction >= 75) & (s.priv >= 0), ["priv_n1", "fwd1", "fwd5"])   # 탐욕인데 개인 순매도
+R["alert_r3"] = alert(night & (s.p_pre_S <= 15), night & (s.p_pre_S > 15) & (s.p_pre_S < 85), ["gap", "intra"])              # 밤사이 심리 하위 15%
+
+# ---------- 김동우 v2 반영 ④ 다음 날 시가 방향 예측: 장 열기 전에 알 수 있는 정보만 ----------
+# 기준 = 전날 시장 자료 + 밤사이 미국 수익률, 비교 = 여기에 밤사이·전날 커뮤니티 심리를 더함. C5와 같은 월별 확장 창, 보합(갭 0) 제외
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.metrics import roc_auc_score
+usr = pd.read_csv("us_overnight.csv", dtype={"date": str}).set_index("date").us_ret if os.path.exists("us_overnight.csv") else None
+s["us_ret"] = s.date.map(usr) if usr is not None else np.nan
+for c in ["ret", "mret", "absret", "vr", "range", "priv", "inst", "frgn", "S", "lint", "kw"]: s[c + "_l1"] = gq[c].shift(1)
+s["lpre"] = np.log1p(s.pre_n_posts); s["up_gap"] = (s.gap > 0).astype(float).where(s.gap.notna() & (s.gap != 0))
+OPEN_MKT = ["ret_l1", "mret_l1", "absret_l1", "vr_l1", "range_l1", "priv_l1", "inst_l1", "frgn_l1", "us_ret"]
+OPEN_COM = OPEN_MKT + ["pre_S", "lpre", "S_l1", "lint_l1", "kw_l1"]
+dd = s.dropna(subset=OPEN_COM + ["up_gap"]).copy(); dd["ym"] = dd.date.str[:7]
+pp = {k: [] for k in ["mkt_logit", "com_logit", "mkt_gbm", "com_gbm"]}; truth, dates = [], []
+for m_ in test_months:
+    tr, te = dd[dd.ym < m_], dd[dd.ym == m_]
+    if te.empty: continue
+    for name, cols in (("mkt", OPEN_MKT), ("com", OPEN_COM)):
+        lo = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000)).fit(tr[cols], tr.up_gap); pp[f"{name}_logit"] += list(lo.predict_proba(te[cols])[:, 1])
+        gb = HistGradientBoostingClassifier(max_iter=200, learning_rate=0.05, max_leaf_nodes=31, random_state=0).fit(tr[cols], tr.up_gap); pp[f"{name}_gbm"] += list(gb.predict_proba(te[cols])[:, 1])
+    truth += list(te.up_gap); dates += list(te.date)
+truth = np.array(truth); og = {k: {"auc": float(roc_auc_score(truth, v)), "brier": float(np.mean((np.array(v) - truth) ** 2))} for k, v in pp.items()}
+for mdl in ("logit", "gbm"):   # DM: 날짜별 Brier 손실 차이(시장만 − 커뮤니티 추가), 양수면 커뮤니티가 나음
+    e = pd.DataFrame({"date": dates, "d": (np.array(pp[f"mkt_{mdl}"]) - truth) ** 2 - (np.array(pp[f"com_{mdl}"]) - truth) ** 2}).groupby("date").d.mean()
+    o = sm.OLS(e.values, np.ones(len(e))).fit(cov_type="HAC", cov_kwds={"maxlags": 5}); og[f"dm_{mdl}"] = {"mean_gain": float(o.params[0]), "t": float(o.tvalues[0]), "days": int(len(e))}
+og["n_test"] = int(len(truth)); og["up_share"] = float(truth.mean()); R["c5_open"] = og
+
 # ---------- B5 행동 축: 커뮤니티 안의 매수·매도 인증, 보유자 vs 비보유자 심리 ----------
 if "n_buy" in s.columns:
     nb = s.n_buy + s.n_sell
@@ -149,6 +189,6 @@ if "n_buy" in s.columns:
 R["short_coverage"] = {"days": int(s[s.date >= "2025-03-31"].short.notna().sum()), "zero_share": float((s[s.date >= "2025-03-31"].short == 0).mean())}
 json.dump(R, open("extra_results.json", "w"), ensure_ascii=False, indent=1, default=float)
 pr = lambda k: print(k, json.dumps(R[k], ensure_ascii=False, default=float)[:600])
-for k in [k for k in R if k.startswith("b5_")] + ["b4_fit", "b4_cases", "b4_fwd1", "b4_fwd5", "b4_priv_n1", "b4_vr_n1", "c2_bucket", "c2_regime", "c2_reg_fwd1", "c2_reg_fwd5", "c2_reg_fwd20",
+for k in [k for k in R if k.startswith(("b5_", "alert_", "c5_open"))] + ["b4_fit", "b4_cases", "b4_fwd1", "b4_fwd5", "b4_priv_n1", "b4_vr_n1", "c2_bucket", "c2_regime", "c2_reg_fwd1", "c2_reg_fwd5", "c2_reg_fwd20",
           "c3_vr_n1", "c3_range_n1", "c3_short_n1", "c4_same", "c4_next", "c4_quint", "c5", "short_coverage"]: pr(k)
 for r in path: print(r["h"], round(r["ret_g"], 3), round(r["ret_g_t"], 1), round(r["ret_f"], 3), round(r["ret_f_t"], 1), "| priv", round(r["priv_g"], 2), round(r["priv_g_t"], 1), round(r["priv_f"], 2), round(r["priv_f_t"], 1))
