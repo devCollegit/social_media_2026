@@ -56,7 +56,8 @@
 | | `rotation_keywords.py` | 섹터·분기별 토론글 대표 단어 (단어와 빈도만 저장) | `rotation_keywords.json` |
 | | `analysis_extra.py` | 지수 구간별 이후 성과, 심리 → 다음 날 거래량·변동폭·공매도, 탐욕·공포 반응 경로, 잔차 심리, 다음 날 예측 비교, 커뮤니티 안 인증 · 보유 행동과 실제 수급, 알림 규칙 3개 검증, 다음 날 시가 방향 예측(장 열기 전 정보만) | `extra_results.json` |
 | | `compare_a9.py` | 모델을 바꾸기 전후 결과 파일의 회귀 계수를 모두 비교해 부호·유의성이 바뀐 것을 찾는다 | `a9_compare.json` |
-| 9. 발표자료 | `presentation/build_presentation.py` | 분석 결과로 HTML 발표자료를 만든다 | `.html` |
+| 9. 발표자료 | `presentation/build_presentation.py` | 분석 결과로 HTML 발표자료를 만든다. 본편은 메시지와 핵심 숫자만, 검정 통계는 부록의 상세판에 둔다 | `.html` |
+| | 시연 대시보드 | 발표 때 직접 보여 주는 화면. `김동우/fear_greed_v2/toss_fear_greed_v2/run_all.sh --from-apply <이 폴더> <이 폴더>/apply_out4 <결과 폴더>`로 `data.js`를 만들어 `김동우/fear_greed_v2/ui/`에 넣으면 열린다. 실제 데이터로 만든 파일은 저장소에 올리지 않는다 | |
 | | `presentation/export_pdf.py` | HTML을 PDF로 바꾼다 | `.pdf` |
 
 ## 환경

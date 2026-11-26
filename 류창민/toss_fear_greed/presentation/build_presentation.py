@@ -391,12 +391,7 @@ add(kind="grid", section="05 정리", key="alerts", title="알림으로 써 보�
              "약세 출발 알림은 시가까지만 맞는다. 장중엔 " + ("오히려 일부 되돌린다" if al3["intra"]["b"] > 0 and abs(al3["intra"]["t"]) >= 1.96 else "차이가 없다"),
              f"말과 행동이 다름 알림은 탐욕인 날의 {al2['share_on']*100:.0f}%에서 켜져 알림으로 쓰기엔 너무 잦다. 이후 수익률 차이도 없다",
              "수급과 시가를 미리 보는 온도계 알림으로는 쓸 수 있지만, 매매 신호는 아니다"])
-add(kind="shot", section="05 정리", key="dash", title="활용 예시: 커뮤니티 심리 계측기",
-    lead="시장 심리, 오늘 켜진 알림, 섹터 지도를 한 화면에 보여 준다",
-    img=base64.b64encode(open(os.path.join(HERE, "assets/dashboard_home.png"), "rb").read()).decode(),
-    bullets=["화면은 최근 140거래일 실제 데이터 (2026-11-11 20:00 마감 기준)", "탭은 시장 홈 · 종목 상세 · 장전 브리핑 세 가지",
-             "알림 카드마다 '이런 날 과거에는' 기록을 붙인다. 예: 약세 출발 알림 1,287번 중 869번 하락 출발",
-             "매매 권유가 아니라 분위기를 읽는 도구로 만들었다"])
+# 활용 화면 캡처 슬라이드는 11-26에 빼고, 발표 때 대시보드를 직접 시연하는 슬라이드(demo)로 바꿨다
 add(kind="bullets2", section="05 정리", title="한계",
     lead="숫자를 읽을 때 함께 봐야 할 것",
     bullets=["라벨 품질: 정답은 LLM 판정이고 사람 검수를 거치지 않았다", "대표성: 커뮤니티에 글을 쓰는 사람이 전체 투자자를 대표하지 않는다",
@@ -429,18 +424,43 @@ for k in order42 + ["heat"]: S.remove(by[k])
 pos = S.index(by["posts_next"]) + 1
 for k in reversed(order42): S.insert(pos, by[k])
 for k in ["ex1", "ex3", "ex4"]: by[k]["section"] = "4-2 예시"
-end = S.pop()                       # 감사합니다
-S.append(dict(kind="section", num="부록", title="근거 자료", sub="발표 본문에서 요약한 표의 원자료"))
-by["heat"]["section"] = "부록"; S.append(by["heat"]); S.append(end)
+# ---- 본편 · 부록 나누기 (11-26 창민: 본편은 메시지 한 줄 + 핵심 숫자, 검정 통계 · 비교군 설명은 부록의 상세판으로) ----
+import copy
+TK = {"CNN Fear & Greed Index": "cnn", "RSI (상대강도지수)": "rsi", "세 지표 비교와 활용": "cmp", "이번 지수를 만드는 방법": "how",
+      "두 가지 데이터를 종목 · 거래일로 맞춘다": "data", "15개 섹터, 45종목": "sectors", "글을 어느 거래일에 넣을까": "daybound",
+      "감성 = 이 종목 주가를 두고 품은 기대와 두려움": "def", "전부 LLM으로 읽으면": "cost", "실제 방법: LLM으로 가르치고, 모델로 전부 읽는다": "method",
+      "분류 모델 성능": "perf", "한계": "limits"}
+for x in S:
+    if x.get("key"): continue
+    k = x.get("kind")
+    x["key"] = {"cover": "cover", "abc": "abc", "end": "end"}.get(k) or (f"sec{x['num']}" if k == "section" else ("summary" if k == "summary" else TK.get(x.get("title"))))
+by.update({x["key"]: x for x in S if x.get("key")})   # 앞에서 빼 둔 섹터 지도(heat)도 그대로 둠
+al1, al3 = XR["alert_r1"], XR["alert_r3"]
+by["demo"] = dict(kind="bullets2", key="demo", section="05 정리", title="시연: 커뮤니티 심리 계측기",
+    lead="분석 결과를 서비스 화면으로 옮겨 봤다. 실제 데이터로 직접 눌러 보며 보여 준다",
+    bullets=["시장 홈: 시장 심리, 오늘 켜진 알림, 섹터 지도를 한 화면에",
+             "종목 상세: 주가 · 심리 지수 · 글 수를 한 시간축에 놓고 '이런 날 과거에는' 기록을 붙였다",
+             "장전 브리핑: 밤사이 공포 · 탐욕이 큰 종목과 '시가까지만 설명한다'는 문구",
+             f"알림은 2년치로 검증했다. 개인 매수 집중 알림 다음 날 개인 순매수 {al1['priv_n1']['b']:+.1f}%p, 약세 출발 알림 시가 갭 {al3['gap']['b']:+.2f}%p"])
+BRIEF = {"perf": [1, 3], "posts_dir": [0, 1], "quint": [0, 1], "sector": [0, 1, 2],
+         "dn": [0, 1, "장이 열린 뒤에는 밤 글의 효과가 더 이어지지 않는다"], "lag": [0, 2, 3], "c2": [0, 1],
+         "c5": [4, 5, "시장 자료만 쓴 모델보다 다음 날 개인 순매수 · 거래량 · 변동폭 예측 오차도 모두 줄었다"], "limits": [0, 1, 2, 6]}
+untstat = lambda t: re.sub(r"\s*\(t=[^)]*\)", "", re.sub(r",\s*t=[-−\d.]+(?=\))", "", t))   # 본편에선 t값을 뺀다
+for k, sel in BRIEF.items():
+    d = copy.deepcopy(by[k]); d["key"] = k + "_full"; by[d["key"]] = d                      # 부록 상세판: 원래 글머리 그대로
+    by[k]["bullets"] = [untstat(by[k]["bullets"][i]) if isinstance(i, int) else i for i in sel]
+by["c5"]["title"] = "커뮤니티 변수를 더하면 내일 시가 방향 · 거래량 · 개인 수급 예측이 나아진다"   # 본편은 시가 방향을 앞세움
+MAIN = ["cover", "abc", "sec01", "cmp", "how", "sec02", "data", "daybound", "sec03", "def", "method", "perf",
+        "sec04", "posts_dir", "quint", "sector", "dn", "lag", "c2", "c5", "sec05", "summary", "demo", "limits", "end"]
+APPX = ["cnn", "rsi", "sectors", "cost", "perf_full", "posts_dir_full", "posts_next", "quint_full", "month", "sector_full", "ex1", "ex2", "ex3", "ex4", "heat",
+        "crash", "dn_full", "gap", "lag_full", "c2_full", "c3", "c6", "b5", "b4", "c5_full", "alerts", "limits_full"]
+for k in APPX: by[k]["section"] = "부록 · " + (by[k].get("section") or "").replace("부록", "").strip(" ·") if by[k].get("section") else "부록"
+S[:] = [by[k] for k in MAIN] + [dict(kind="section", key="secA", num="부록", title="근거 자료", sub="본편에서 줄인 상세 수치와 추가 분석")] + [by[k] for k in APPX]
 # ---- 4장 목차: 04 구분 장 바로 뒤 ----
-toc = dict(kind="toc", section="04 분석", title="분석 결과 한눈에", lead="4장에서 확인한 것을 먼저 문장으로 보여 주고, 그 근거를 차례로 본다",
-           groups=[("4-1 글 수와 개인 수급", ["posts_dir", "posts_next"]),
-                   ("4-2 투자자별 수급과 심리", ["quint", "month", "sector", "crash"]),
-                   ("4-3 선행 · 후행", ["dn", "gap", "lag"]),
-                   ("4-4 보완 분석", ["c2", "c3", "c6", "b5", "b4", "c5"])])
-sec4 = next(i for i, x in enumerate(S) if x.get("kind") == "section" and x.get("num") == "04")
-S.insert(sec4 + 1, toc)
-for g, keys in toc["groups"]: pass
+toc = dict(kind="toc", key="toc", section="04 분석", title="분석 결과 한눈에", lead="4장에서 확인한 것을 먼저 문장으로 보여 주고, 그 근거를 차례로 본다",
+           groups=[("4-1 글 수와 개인 수급", ["posts_dir"]), ("4-2 투자자별 수급과 심리", ["quint", "sector"]),
+                   ("4-3 선행 · 후행", ["dn", "lag"]), ("4-4 보완 분석", ["c2", "c5"])])
+S.insert(S.index(by["sec04"]) + 1, toc)
 toc["items"] = [(g, [(by[k]["title"], S.index(by[k]) + 1) for k in keys]) for g, keys in toc["groups"]]
 
 
@@ -459,6 +479,7 @@ def prose_walk(fn):
         if x["kind"] == "labels": x["ex"] = [(t, l, c, fn(w)) for t, l, c, w in x["ex"]]
 if os.environ.get("DUMP_PROSE"):
     seen = []
+    if os.environ.get("DUMP_MAIN"): S = S[:next(i for i, x in enumerate(S) if x.get("key") == "secA")]   # 본편만
     prose_walk(lambda v: (seen.append(v) if v not in seen else None) or v)
     json.dump(seen, open(os.path.join(HERE, "prose_src.json"), "w"), ensure_ascii=False, indent=1); raise SystemExit(f"dumped {len(seen)}")
 HMAP = os.path.join(HERE, "humanize_map.json")
